@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>우쿨렐레 리듬 몬스터 RPG</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- 타이틀 -->
+    <section id="screen-title" class="screen active">
+      <div class="title-box">
+        <h1>우쿨렐레 리듬<br />몬스터 RPG</h1>
+        <p class="subtitle">리듬을 맞추고 몬스터를 물리치세요!</p>
+        <button class="btn btn-primary" id="btn-new-game">새 게임</button>
+        <button class="btn btn-secondary" id="btn-continue" disabled>이어하기</button>
+        <button class="btn btn-secondary" id="btn-duel-mode">2인 대결 모드</button>
+      </div>
+    </section>
+
+    <!-- 월드 선택 -->
+    <section id="screen-world" class="screen">
+      <h2>월드 선택</h2>
+      <div id="world-list" class="world-grid"></div>
+      <button class="btn btn-back" id="btn-world-back">← 돌아가기</button>
+    </section>
+
+    <!-- 전투 -->
+    <section id="screen-battle" class="screen">
+      <div class="battle-layout">
+        <aside class="teacher-panel" id="teacher-panel">
+          <h3>교사 패널</h3>
+          <div class="teacher-btns">
+            <button class="btn btn-sm" id="btn-fullscreen">전체화면</button>
+            <button class="btn btn-sm" id="btn-zoom-100">100%</button>
+            <button class="btn btn-sm" id="btn-zoom-200">200%</button>
+            <button class="btn btn-sm" id="btn-zoom-300">300%</button>
+            <button class="btn btn-sm" id="btn-hide-answer">정답 숨기기</button>
+            <button class="btn btn-sm" id="btn-show-answer">정답 표시</button>
+            <button class="btn btn-sm" id="btn-regenerate">패턴 재생성</button>
+          </div>
+          <hr />
+          <p class="teacher-label">판정</p>
+          <div class="judge-btns">
+            <button class="btn btn-success" id="btn-judge-perfect">완벽!</button>
+            <button class="btn btn-good" id="btn-judge-good">좋음</button>
+            <button class="btn btn-miss" id="btn-judge-miss">실패</button>
+          </div>
+          <hr />
+          <p class="teacher-label">특수기</p>
+          <div class="skill-btns">
+            <button class="btn btn-skill" id="btn-skill-burst">리듬 버스트 (10)</button>
+            <button class="btn btn-skill" id="btn-skill-tempo">템포 브레이크 (15)</button>
+            <button class="btn btn-skill" id="btn-skill-perfect">퍼펙트 스트럼 (20)</button>
+          </div>
+        </aside>
+
+        <main class="battle-main">
+          <div class="battle-header">
+            <div class="player-info">
+              <span id="player-name">플레이어</span>
+              <div class="stat-bar hp-bar">
+                <div class="stat-fill" id="player-hp-fill"></div>
+              </div>
+              <span id="player-hp-text">20/20</span>
+              <span class="level-badge" id="player-level">Lv.1</span>
+            </div>
+            <div class="exp-info">
+              EXP <span id="player-exp">0</span>
+              <span class="combo-display" id="combo-display">콤보 0</span>
+            </div>
+          </div>
+
+          <div class="duel-indicator hidden" id="duel-indicator">
+            <span id="duel-role">A 학생 공격</span>
+          </div>
+
+          <div class="monster-area" id="monster-area">
+            <div class="world-label" id="world-label">월드 1 · 숲의 리듬</div>
+            <div class="monster-sprite" id="monster-sprite">🟢</div>
+            <div class="monster-name" id="monster-name">슬라임</div>
+            <div class="stat-bar hp-bar monster-hp">
+              <div class="stat-fill enemy-fill" id="monster-hp-fill"></div>
+            </div>
+            <span id="monster-hp-text">15/15</span>
+            <div class="boss-badge hidden" id="boss-badge">BOSS</div>
+          </div>
+
+          <div class="message-box" id="message-box">
+            리듬 패턴을 연주하세요!
+          </div>
+
+          <div class="score-container" id="score-container">
+            <div id="vexflow-output"></div>
+          </div>
+
+          <div class="strum-container" id="strum-container">
+            <h4>스트럼 가이드</h4>
+            <div id="strum-hints"></div>
+          </div>
+
+          <div class="battle-actions">
+            <button class="btn btn-secondary" id="btn-flee">도망</button>
+          </div>
+        </main>
+      </div>
+    </section>
+
+    <!-- 결과 -->
+    <section id="screen-result" class="screen">
+      <div class="result-box">
+        <h2 id="result-title">승리!</h2>
+        <p id="result-message"></p>
+        <div id="levelup-effect" class="levelup-effect hidden">LEVEL UP!</div>
+        <button class="btn btn-primary" id="btn-result-continue">계속</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="fx-layer"></div>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
