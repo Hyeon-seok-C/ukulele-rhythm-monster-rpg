@@ -6,7 +6,7 @@ export const WORLDS = /** @type {World[]} */ ([
   { id: 1, name: '숲의 리듬', theme: 'theme-beginner', difficulty: 1 },
   { id: 2, name: '동굴의 박자', theme: 'theme-intermediate', difficulty: 2 },
   { id: 3, name: '화산의 스트럼', theme: 'theme-advanced', difficulty: 3 },
-  { id: 4, name: '어둠의 템포', theme: 'theme-advanced', difficulty: 4 },
+  { id: 4, name: '어둠의 동굴', theme: 'theme-advanced', difficulty: 4 },
   { id: 5, name: '메트로놈 성', theme: 'theme-boss', difficulty: 5 },
 ]);
 
@@ -36,15 +36,23 @@ export const MONSTERS = /** @type {Record<number, Monster[]>} */ ({
   ],
   2: [
     { id: 'bat', name: '박쥐', emoji: '🦇', hp: 18, atk: 3, exp: 12 },
+    { id: 'crystal_crab', name: '수정게', emoji: '🦀', hp: 20, atk: 3, exp: 13 },
     { id: 'skeleton', name: '해골병사', emoji: '💀', hp: 22, atk: 4, exp: 14 },
+    { id: 'crystal_golem', name: '수정골렘', emoji: '💎', hp: 28, atk: 5, exp: 18 },
+    { id: 'conductor_bat', name: '지휘자박쥐', emoji: '🎼', hp: 26, atk: 4, exp: 16 },
     { id: 'cave_orc', name: '동굴오크', emoji: '🧌', hp: 50, atk: 6, exp: 40, isBoss: true, bossRule: 'more_rests' },
   ],
   3: [
+    { id: 'salamander', name: '불도마뱀', emoji: '🦎', hp: 26, atk: 5, exp: 18 },
     { id: 'fire_spirit', name: '화염정령', emoji: '🔥', hp: 24, atk: 5, exp: 17 },
+    { id: 'lava_crab', name: '용암게', emoji: '🦀', hp: 30, atk: 6, exp: 20 },
+    { id: 'magma_golem', name: '마그마골렘', emoji: '🌋', hp: 35, atk: 7, exp: 25 },
     { id: 'beat_phoenix', name: '비트피닉스', emoji: '🦅', hp: 60, atk: 8, exp: 50, isBoss: true, bossRule: 'more_sixteenths' },
   ],
   4: [
     { id: 'dark_mage', name: '암흑마법사', emoji: '🧙', hp: 34, atk: 7, exp: 24 },
+    { id: 'shadow_thief', name: '그림자도적', emoji: '🌑', hp: 32, atk: 7, exp: 23 },
+    { id: 'dark_jester', name: '어둠의 어릿광대', emoji: '🃏', hp: 36, atk: 8, exp: 26 },
     { id: 'death_knight', name: '데스나이트', emoji: '⚰️', hp: 42, atk: 9, exp: 30 },
     { id: 'tempo_lord', name: '템포로드', emoji: '⏱️', hp: 70, atk: 9, exp: 60, isBoss: true, bossRule: 'mixed' },
   ],

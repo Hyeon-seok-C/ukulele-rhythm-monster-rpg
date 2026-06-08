@@ -33,6 +33,8 @@ import { DUEL_HP } from './game-state.js';
 /** @type {import('./game-state.js').GameState} */
 let gameState = createNewGame();
 let selectedWorldId = 1;
+/** @type {boolean} 5월드 클리어 축하 화면 → 타이틀 복귀 대기 */
+let awaitingClearToTitle = false;
 
 const screens = {
   title: document.getElementById('screen-title'),
@@ -323,14 +325,24 @@ function handleResultContinue() {
     return;
   }
 
-  const { nextWorld, cleared } = advanceAfterVictory();
+  if (awaitingClearToTitle) {
+    awaitingClearToTitle = false;
+    clearSave();
+    gameState = createNewGame(false);
+    showScreen('title');
+    updateContinueButton();
+    return;
+  }
+
+  const { nextWorld, cleared, clearedWorldId } = advanceAfterVictory();
   if (cleared) {
+    awaitingClearToTitle = true;
     showResult('축하합니다!', '모든 몬스터를 물리쳤습니다! 리듬 마스터!', false, '👑');
     return;
   }
 
   if (nextWorld) {
-    const w = getWorld(gameState.player.worldId);
+    const w = getWorld(clearedWorldId ?? gameState.player.worldId);
     showResult('월드 클리어!', `${w.name}을(를) 정복했습니다!`);
     return;
   }

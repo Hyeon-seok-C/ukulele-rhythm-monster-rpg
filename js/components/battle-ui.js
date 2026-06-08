@@ -1,7 +1,7 @@
 import { renderSystemIcon } from '../system-icons.js';
 import { getNextLevelExp } from '../game-state.js';
 import { getWorldScene, getDuelScene } from '../world-backgrounds.js';
-import { renderMonsterPortrait } from '../monster-meta.js';
+import { getMonsterFieldBottom, renderMonsterPortrait } from '../monster-meta.js';
 import { DUEL_OPPONENT_META, DUEL_PLAYER_META } from '../player-meta.js';
 
 /** @param {number} current @param {number} max @returns {string} */
@@ -116,7 +116,7 @@ export function renderBattleScene(sceneContainer, hudContainer, data) {
       </div>
     </div>
 
-    <div class="monster-field-sprite" id="monster-field-sprite">
+    <div class="monster-field-sprite" id="monster-field-sprite" style="bottom:${getMonsterFieldBottom(monster.id)}%">
       <div class="monster-sprite-inner" id="monster-portrait">${renderMonsterPortrait(monster.id, monster.emoji)}</div>
       <div class="monster-shadow" aria-hidden="true"></div>
     </div>
@@ -203,7 +203,10 @@ export function updateBattleStatsUI(hudRoot, stats) {
 
 /** @param {HTMLElement} portrait */
 export function shakeMonster(portrait) {
-  const target = portrait ?? document.getElementById('monster-field-sprite');
+  const root = portrait ?? document.getElementById('monster-field-sprite');
+  const target = root?.querySelector('.monster-sprite-wrap')
+    ?? root?.querySelector('.monster-sprite-inner')
+    ?? root;
   target?.classList.add('animate-shake');
   setTimeout(() => target?.classList.remove('animate-shake'), 400);
 }

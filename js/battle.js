@@ -561,16 +561,17 @@ export function advanceAfterVictory() {
   const monstersInWorld = getMonstersInWorld(state.player.worldId);
 
   if (state.player.monsterIndex >= monstersInWorld) {
+    const clearedWorldId = state.player.worldId;
     state.player.monsterIndex = 0;
     if (state.player.worldId < getWorldCount()) {
       state.player.worldId++;
       saveGame(state);
-      return { nextWorld: true, cleared: false };
+      return { nextWorld: true, cleared: false, clearedWorldId };
     }
     saveGame(state);
-    return { nextWorld: false, cleared: true };
+    return { nextWorld: false, cleared: true, clearedWorldId };
   }
 
   saveGame(state);
-  return { nextWorld: false, cleared: false };
+  return { nextWorld: false, cleared: false, clearedWorldId: null };
 }

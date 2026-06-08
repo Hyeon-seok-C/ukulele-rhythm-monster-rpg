@@ -223,7 +223,7 @@ body {
 
 /* ===== World Select ===== */
 .world-screen {
-  max-width: 900px;
+  max-width: 1100px;
   margin: 0 auto;
   padding: 32px 20px;
   min-height: 100vh;
@@ -280,7 +280,7 @@ body {
   display: grid;
   grid-template-columns: 1fr minmax(220px, 280px);
   gap: 16px;
-  align-items: stretch;
+  align-items: start;
 }
 .world-map-wrap--compact {
   grid-template-columns: 1fr;
@@ -298,7 +298,30 @@ body {
   overflow: hidden;
   box-shadow: inset 0 0 40px rgba(0,0,0,0.35), 0 6px 0 rgba(0,0,0,0.3);
 }
+.world-map-canvas--adventure {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1024 / 682;
+  min-height: 260px;
+  width: 100%;
+  padding: 0;
+  background-color: #0b1528;
+  box-shadow: 0 6px 0 rgba(0,0,0,0.3);
+}
+.world-map-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 1024 / 682;
+  background-color: transparent;
+  background-position: center;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+.world-map-canvas--adventure .world-map-path { display: none; }
 .world-map-wrap--compact .world-map-canvas { min-height: 240px; }
+.world-map-wrap--compact .world-map-canvas--adventure { min-height: 200px; }
 
 .world-map-path {
   position: absolute;
@@ -349,6 +372,33 @@ body {
   animation: map-node-pulse 1.8s ease-in-out infinite;
 }
 .world-map-node--locked { opacity: 0.55; filter: grayscale(0.6); }
+
+/* 모험 지도 배경 위 — 지도에 그려진 원형 스테이지 클릭 영역 */
+.world-map-node--map-overlay {
+  width: 10.2%;
+  aspect-ratio: 1;
+  height: auto;
+  border-radius: 50%;
+  background: transparent;
+}
+.world-map-node--map-overlay.world-map-node--clickable:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.world-map-node--map-overlay.world-map-node--selected {
+  box-shadow: 0 0 0 3px #fff, 0 0 18px rgba(255, 234, 167, 0.85);
+  border-radius: 50%;
+}
+.world-map-node--map-overlay.world-map-node--current {
+  animation: map-node-pulse 1.8s ease-in-out infinite;
+}
+.world-map-node--map-overlay.world-map-node--locked {
+  background: rgba(0, 0, 0, 0.45);
+  cursor: not-allowed;
+}
+.world-map-node--map-overlay .world-map-player-pin {
+  top: -22px;
+  font-size: 20px;
+}
 .world-map-node-ring {
   position: absolute;
   inset: 4px;
@@ -517,6 +567,9 @@ body {
   display: grid;
   grid-template-columns: repeat(10, minmax(0, 1fr));
   gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 @media (max-width: 900px) {
   .bestiary-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
@@ -988,18 +1041,21 @@ body {
 /* Monster on field */
 .monster-field-sprite {
   position: absolute;
-  right: 6%;
-  bottom: 30%;
+  left: 50%;
+  right: auto;
+  bottom: 26%;
+  transform: translateX(-50%);
   z-index: 5;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
   text-align: center;
+  width: min(72vw, 420px);
 }
 .monster-shadow {
   flex-shrink: 0;
-  width: clamp(120px, 22vw, 160px);
+  width: clamp(100px, 42vw, 200px);
   height: 20px;
   margin-top: -6px;
   background: rgba(0, 0, 0, 0.22);
@@ -1052,8 +1108,38 @@ body {
 .monster-sprite-png {
   display: block;
   object-fit: contain;
+  object-position: center bottom;
   image-rendering: auto;
   max-width: 100%;
+}
+
+/* 넓은 캔버스 몬스터 — 전투 필드에서 크게 */
+.monster-field-sprite .monster-sprite-wrap--large-canvas.monster-tier-normal .monster-sprite-img {
+  height: clamp(150px, 34vw, 230px);
+}
+.monster-field-sprite .monster-sprite-wrap--large-canvas.monster-tier-boss .monster-sprite-img {
+  height: clamp(190px, 40vw, 280px);
+}
+.monster-field-sprite .monster-sprite-wrap--large-canvas.monster-tier-final .monster-sprite-img {
+  height: clamp(210px, 44vw, 300px);
+}
+
+/* 기본 PNG 몬스터 — 전투 필드에서 크게 */
+.monster-field-sprite .monster-sprite-wrap--battle-large.monster-tier-normal .monster-sprite-img {
+  height: clamp(130px, 30vw, 200px);
+}
+.monster-field-sprite .monster-sprite-wrap--battle-large.monster-tier-boss .monster-sprite-img {
+  height: clamp(165px, 36vw, 250px);
+}
+
+/* 도감 — 나중에 추가된 넓은 캔버스 몬스터만 약간 크게 */
+.bestiary-sprite .monster-sprite-wrap--large-canvas .monster-sprite-img {
+  height: 54px;
+  max-height: 54px;
+}
+.bestiary-sprite .monster-sprite-wrap--large-canvas.monster-tier-boss .monster-sprite-img {
+  height: 58px;
+  max-height: 58px;
 }
 @keyframes monster-idle {
   0%, 100% { transform: translateY(0); }

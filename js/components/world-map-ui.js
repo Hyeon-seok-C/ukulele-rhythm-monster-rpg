@@ -1,15 +1,16 @@
 import { WORLDS, getMonster } from '../data.js';
-import { getWorldScene } from '../world-backgrounds.js';
+import { getWorldScene, ADVENTURE_MAP_BG } from '../world-backgrounds.js';
 import { renderMonsterPortrait } from '../monster-meta.js';
 
 /** @typedef {{ currentWorldId: number, maxUnlockedWorldId?: number, monsterIndex?: number, mode?: 'select'|'view', compact?: boolean, showDetail?: boolean, onSelectWorld?: (id: number) => void }} WorldMapOptions */
 
+/** adventure_map_bg.png (1024×682) 원형 스테이지 아이콘 중심 — 이미지 기준 % */
 const NODE_LAYOUT = [
-  { x: 14, y: 72 },
-  { x: 32, y: 58 },
-  { x: 52, y: 44 },
-  { x: 70, y: 30 },
-  { x: 86, y: 18 },
+  { x: 14.1, y: 83.5 },
+  { x: 33.8, y: 72.2 },
+  { x: 50.0, y: 60.0 },
+  { x: 67.7, y: 46.8 },
+  { x: 84.5, y: 32.4 },
 ];
 
 /**
@@ -35,34 +36,25 @@ export function renderWorldMap(root, options) {
 
   root.innerHTML = `
     <div class="world-map-wrap${compact ? ' world-map-wrap--compact' : ''}">
-      <div class="world-map-canvas" id="world-map-canvas" style="--world-map-bg: url('${detail.bg}')">
-        <svg class="world-map-path" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-          <polyline class="world-map-path-line world-map-path-line--bg"
-            points="${NODE_LAYOUT.map((p) => `${p.x},${p.y}`).join(' ')}" />
-          <polyline class="world-map-path-line world-map-path-line--fg"
-            points="${NODE_LAYOUT.slice(0, maxUnlockedWorldId).map((p) => `${p.x},${p.y}`).join(' ')}" />
-        </svg>
+      <div class="world-map-canvas world-map-canvas--adventure" id="world-map-canvas">
+        <div class="world-map-stage" style="background-image:url('${ADVENTURE_MAP_BG}')">
         ${WORLDS.map((world, idx) => {
           const pos = NODE_LAYOUT[idx] ?? NODE_LAYOUT[0];
           const locked = world.id > maxUnlockedWorldId;
           const selected = world.id === selectedId;
           const current = world.id === currentWorldId;
           const clickable = mode === 'select' && !locked;
-          const nodeScene = getWorldScene(world.id);
           return `
             <button type="button"
-              class="world-map-node${clickable ? ' world-map-node--clickable' : ''}${selected ? ' world-map-node--selected' : ''}${current ? ' world-map-node--current' : ''}${locked ? ' world-map-node--locked' : ''}"
+              class="world-map-node world-map-node--map-overlay${clickable ? ' world-map-node--clickable' : ''}${selected ? ' world-map-node--selected' : ''}${current ? ' world-map-node--current' : ''}${locked ? ' world-map-node--locked' : ''}"
               data-world-id="${world.id}"
-              style="left:${pos.x}%; top:${pos.y}%; --node-color:${world.theme === 'theme-boss' ? '#ffeaa7' : '#74b9ff'};"
+              style="left:${pos.x}%; top:${pos.y}%;"
               ${locked ? 'disabled' : ''}
               aria-label="${world.name}">
-              <span class="world-map-node-ring"></span>
-              <span class="world-map-node-thumb" style="background-image:url('${nodeScene.mapIcon}')"></span>
-              <span class="world-map-node-num">${world.id}</span>
-              <span class="world-map-node-label">${world.name}</span>
               ${current ? '<span class="world-map-player-pin" aria-hidden="true">📍</span>' : ''}
             </button>`;
         }).join('')}
+        </div>
       </div>
       ${showDetail && !compact ? `
         <aside class="world-map-detail">
