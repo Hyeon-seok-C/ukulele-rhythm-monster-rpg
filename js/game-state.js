@@ -28,6 +28,7 @@ const LEGACY_SAVE_KEY = 'ukulele-rhythm-monster-save';
  *   player: PlayerState,
  *   monsterHp: number,
  *   duelOpponent: DuelOpponent|null,
+ *   duelCombos: { A: number, B: number }|null,
  *   lastPatternKey: string|null,
  *   inBattle: boolean,
  * }} GameState */
@@ -66,6 +67,7 @@ export function createNewGame(duelMode = false, duelDifficulty = 2) {
     duelOpponent: duelMode
       ? { hp: DUEL_HP, maxHp: DUEL_HP, name: DUEL_OPPONENT_META.name }
       : null,
+    duelCombos: duelMode ? { A: 0, B: 0 } : null,
     lastPatternKey: null,
     inBattle: false,
   };
@@ -84,6 +86,9 @@ function normalizeSave(data) {
     data.duelOpponent = { hp: DUEL_HP, maxHp: DUEL_HP, name: DUEL_OPPONENT_META.name };
   } else if (data.duelOpponent?.name === 'B 학생') {
     data.duelOpponent.name = DUEL_OPPONENT_META.name;
+  }
+  if (data.player.duelMode && !data.duelCombos) {
+    data.duelCombos = { A: 0, B: 0 };
   }
   return data;
 }

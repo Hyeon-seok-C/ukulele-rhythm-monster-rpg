@@ -770,6 +770,17 @@ body {
   text-align: center;
   margin-bottom: 2px;
 }
+.duel-combo-tag {
+  margin: 0 0 4px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #636e72;
+  letter-spacing: 0.5px;
+  text-align: center;
+}
+.duel-combo-tag.duel-combo-active {
+  color: #e17055;
+}
 .duel-top-divider {
   align-self: center;
   font-size: 1.1rem;

@@ -16,10 +16,13 @@ export function hpBarColor(current, max) {
  * 2인 대결 — 두 학생이 마주 보는 PvP 필드
  * @param {HTMLElement} sceneContainer
  * @param {HTMLElement} hudContainer
- * @param {{ opponentHp: number, opponentMax: number, player: object }} data
+ * @param {{ opponentHp: number, opponentMax: number, player: object, duelCombos?: { A: number, B: number }, duelAttacker?: 'A'|'B' }} data
  */
 export function renderDuelBattleScene(sceneContainer, hudContainer, data) {
   const { opponentHp, opponentMax, player } = data;
+  const duelCombos = data.duelCombos ?? { A: 0, B: 0 };
+  const duelAttacker = data.duelAttacker ?? 'A';
+  const activeCombo = duelCombos[duelAttacker] ?? 0;
   const sceneInfo = getDuelScene();
   const bHpPct = Math.max(0, (opponentHp / opponentMax) * 100);
   const bBar = hpBarColor(opponentHp, opponentMax);
@@ -34,6 +37,7 @@ export function renderDuelBattleScene(sceneContainer, hudContainer, data) {
         <div class="duel-fighter-sprite" id="duel-hero-a-mount" aria-label="${DUEL_PLAYER_META.name}"></div>
         <div class="duel-fighter-info">
           <p class="duel-fighter-name">${DUEL_PLAYER_META.name}</p>
+          <p class="duel-combo-tag ${duelCombos.A >= 3 ? 'duel-combo-active' : ''}" id="duel-combo-a">${duelCombos.A}X COMBO</p>
           <div class="bar-row">
             ${renderSystemIcon('icon_hp').outerHTML}
             <div class="rpg-bar duel-hp-bar player-hp-bar">
@@ -50,6 +54,7 @@ export function renderDuelBattleScene(sceneContainer, hudContainer, data) {
         <div class="duel-fighter-sprite" id="duel-hero-b-mount" aria-label="${DUEL_OPPONENT_META.name}"></div>
         <div class="duel-fighter-info">
           <p class="duel-fighter-name">${DUEL_OPPONENT_META.name}</p>
+          <p class="duel-combo-tag ${duelCombos.B >= 3 ? 'duel-combo-active' : ''}" id="duel-combo-b">${duelCombos.B}X COMBO</p>
           <div class="bar-row">
             <span class="bar-label">HP</span>
             <div class="rpg-bar duel-hp-bar">
@@ -72,8 +77,8 @@ export function renderDuelBattleScene(sceneContainer, hudContainer, data) {
 
   hudContainer.innerHTML = `
     <div class="battle-hud-panel battle-hud-duel battle-hud-duel-rhythm">
-      <div class="combo-banner ${player.combo >= 3 ? 'combo-active' : ''}" id="combo-display">
-        ${player.combo > 0 ? `${player.combo}X` : '0X'} COMBO!
+      <div class="combo-banner ${activeCombo >= 3 ? 'combo-active' : ''}" id="combo-display">
+        ${activeCombo > 0 ? `${activeCombo}X` : '0X'} COMBO!
       </div>
       <div class="rhythm-panel">
         <p class="rhythm-panel-title">🎵 리듬 악보 · 4/4 · 1·2·3·4박</p>
@@ -196,8 +201,23 @@ export function updateBattleStatsUI(hudRoot, stats) {
     expText.textContent = `${stats.player.exp}/${next}`;
   }
   if (comboEl) {
-    comboEl.textContent = `${stats.player.combo}X COMBO!`;
-    comboEl.classList.toggle('combo-active', stats.player.combo >= 3);
+    if (stats.duelMode && stats.duelCombos) {
+      const attacker = stats.duelAttacker ?? 'A';
+      const cur = stats.duelCombos[attacker] ?? 0;
+      comboEl.textContent = `${cur}X COMBO!`;
+      comboEl.classList.toggle('combo-active', cur >= 3);
+      ['A', 'B'].forEach((side) => {
+        const tag = document.getElementById(`duel-combo-${side.toLowerCase()}`);
+        const n = stats.duelCombos[side] ?? 0;
+        if (tag) {
+          tag.textContent = `${n}X COMBO`;
+          tag.classList.toggle('duel-combo-active', n >= 3);
+        }
+      });
+    } else {
+      comboEl.textContent = `${stats.player.combo}X COMBO!`;
+      comboEl.classList.toggle('combo-active', stats.player.combo >= 3);
+    }
   }
 }
 
