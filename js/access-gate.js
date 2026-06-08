@@ -50,8 +50,8 @@
 
     function tryUnlock() {
       if (!input) return;
-      var value = String(input.value || '').trim();
-      if (value === String(cfg.pin)) {
+      var value = String(input.value || '').trim().toLowerCase();
+      if (value === String(cfg.pin).toLowerCase()) {
         setAuthed();
         if (error) error.classList.add('hidden');
         showGame();
