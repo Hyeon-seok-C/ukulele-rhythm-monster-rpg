@@ -6,6 +6,16 @@
   <title>리듬 몬스터 RPG</title>
   <script>
     (function () {
+      if (location.protocol === 'file:') return;
+      var path = location.pathname || '/';
+      if (!path.endsWith('/')) path = path.replace(/\/[^/]*$/, '/');
+      var base = document.createElement('base');
+      base.href = path;
+      document.head.appendChild(base);
+    })();
+  </script>
+  <script>
+    (function () {
       if (location.protocol !== 'file:') return;
 
       var PORTS = [8765, 8766, 8767, 8877];
@@ -33,7 +43,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/styles.css" />
-  <script src="js/access-config.js?v=gate2"></script>
+  <script src="js/access-config.js?v=gate3"></script>
   <script>
     (function () {
       if (location.protocol === 'file:') return;
@@ -48,11 +58,11 @@
   </script>
 </head>
 <body>
-  <div id="access-gate" class="site-gate-overlay" hidden>
+  <div id="access-gate" class="site-gate-overlay" data-pin="voxhyeon" hidden>
     <div class="site-gate-box">
       <h2>🔒 리듬 몬스터 RPG</h2>
       <p>접속 코드를 입력하세요</p>
-      <input type="password" id="access-gate-input" class="site-gate-input" inputmode="text" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" maxlength="32" placeholder="접속 코드" />
+      <input type="text" id="access-gate-input" class="site-gate-input" inputmode="text" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" maxlength="32" placeholder="voxhyeon" />
       <button type="button" class="btn btn-primary btn-lg" id="access-gate-submit">입장</button>
       <p class="site-gate-hint hidden" id="access-gate-error">코드가 올바르지 않습니다</p>
     </div>
@@ -231,7 +241,7 @@
       }
     })();
   </script>
-  <script src="js/access-gate.js?v=gate2"></script>
-  <script type="module" src="js/main.js?v=gate2"></script>
+  <script src="js/access-gate.js?v=gate3"></script>
+  <script type="module" src="js/main.js?v=gate3"></script>
 </body>
 </html>
