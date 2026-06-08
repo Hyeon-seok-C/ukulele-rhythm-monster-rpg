@@ -1,11 +1,11 @@
-import { WORLDS, getWorld } from './data.js';
+import { WORLDS, getWorld } from './data.js?v=28';
 import {
   createNewGame,
   loadGame,
   hasSave,
   saveGame,
   clearSave,
-} from './game-state.js?v=25';
+} from './game-state.js?v=28';
 import {
   initBattle,
   startBattle,
@@ -21,20 +21,22 @@ import {
   resumeBattle,
   setShowCounting,
   setDuelDifficulty,
-} from './battle.js?v=27';
-import { sounds, resumeAudio } from './sounds.js';
-import { renderPauseMap, showPauseOverlay } from './pause-menu.js';
-import { renderWorldMap } from './components/world-map-ui.js';
-import { renderBestiaryGrid } from './components/bestiary-ui.js';
-import { initTitleHero } from './components/title-hero.js';
-import { getDuelFighterName } from './player-meta.js';
-import { DUEL_HP } from './game-state.js';
+} from './battle.js?v=28';
+import { sounds, resumeAudio } from './sounds.js?v=28';
+import { renderPauseMap, showPauseOverlay } from './pause-menu.js?v=28';
+import { renderWorldMap } from './components/world-map-ui.js?v=28';
+import { renderBestiaryGrid } from './components/bestiary-ui.js?v=28';
+import { initTitleHero } from './components/title-hero.js?v=28';
+import { getDuelFighterName } from './player-meta.js?v=28';
+import { DUEL_HP } from './game-state.js?v=28';
 
 /** @type {import('./game-state.js').GameState} */
 let gameState = createNewGame();
 let selectedWorldId = 1;
 /** @type {boolean} 5월드 클리어 축하 화면 → 타이틀 복귀 대기 */
 let awaitingClearToTitle = false;
+/** @type {boolean} 월드 클리어 축하 후 다음 전투 진입 */
+let pendingWorldClearEnter = false;
 
 const screens = {
   title: document.getElementById('screen-title'),
@@ -90,9 +92,14 @@ function renderWorldScreen() {
 }
 
 function enterBattle() {
+  if (!gameState.player.duelMode) {
+    gameState.player.duelMode = false;
+    gameState.duelOpponent = null;
+  }
   showScreen('battle');
   syncBattleChromeForMode();
   startBattle(gameState);
+  gameState = getState() ?? gameState;
 }
 
 function syncBattleChromeForMode() {
@@ -103,6 +110,8 @@ function syncBattleChromeForMode() {
 }
 
 function startWorldBattle(worldId) {
+  gameState.player.duelMode = false;
+  gameState.duelOpponent = null;
   gameState.player.worldId = worldId;
   gameState.player.monsterIndex = 0;
   saveGame(gameState);
@@ -341,6 +350,12 @@ function handleResultContinue() {
     return;
   }
 
+  if (pendingWorldClearEnter) {
+    pendingWorldClearEnter = false;
+    enterBattle();
+    return;
+  }
+
   const { nextWorld, cleared, clearedWorldId } = advanceAfterVictory();
   if (cleared) {
     awaitingClearToTitle = true;
@@ -349,6 +364,7 @@ function handleResultContinue() {
   }
 
   if (nextWorld) {
+    pendingWorldClearEnter = true;
     const w = getWorld(clearedWorldId ?? gameState.player.worldId);
     showResult('월드 클리어!', `${w.name}을(를) 정복했습니다!`);
     return;

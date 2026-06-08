@@ -1,27 +1,28 @@
-import { getMonster, getWorld, getMonstersInWorld, getWorldCount } from './data.js';
-import { generatePattern } from './rhythm-generator.js';
-import { renderScore } from './notation.js';
-import { getComboBonus, getDuelComboBonus, getDuelCombosFromState, addExp, saveGame, DUEL_HP, getDuelDifficultyLabel } from './game-state.js?v=27';
-import { sounds } from './sounds.js';
-import { renderRhythmCardSlots, spawnSuccessParticle, spawnComboFire, spawnBurstImpact } from './components/rhythm-card.js';
+import { getMonster, getWorld, getMonstersInWorld, getWorldCount } from './data.js?v=28';
+import { generatePattern } from './rhythm-generator.js?v=28';
+import { renderScore } from './notation.js?v=28';
+import { getComboBonus, getDuelComboBonus, getDuelCombosFromState, addExp, saveGame, DUEL_HP, getDuelDifficultyLabel } from './game-state.js?v=28';
+import { sounds } from './sounds.js?v=28';
+import { renderRhythmCardSlots, spawnSuccessParticle, spawnComboFire, spawnBurstImpact } from './components/rhythm-card.js?v=28';
 import {
   setupDuelFieldCharacters,
   setDuelFieldState,
   setDuelVictoryPose,
   highlightDuelTurn,
   shakeDuelFieldCharacter,
-} from './components/duel-field.js';
-import { initPlayerHero, setPlayerState, setVictoryPose } from './components/player-hero.js';
-import { strumToPlayerState, DUEL_OPPONENT_META, DUEL_PLAYER_META, getDuelFighterName } from './player-meta.js';
+} from './components/duel-field.js?v=28';
+import { initPlayerHero, setPlayerState, setVictoryPose } from './components/player-hero.js?v=28';
+import { strumToPlayerState, DUEL_OPPONENT_META, DUEL_PLAYER_META, getDuelFighterName } from './player-meta.js?v=28';
 import {
   renderBattleScene,
   renderDuelBattleScene,
   updateBattleStatsUI,
+  hpBarColor,
   shakeMonster,
   shieldEffect,
   burstEffect,
   updateSkillButtonsUI,
-} from './components/battle-ui.js?v=27';
+} from './components/battle-ui.js?v=28';
 
 /** @typedef {import('./game-state.js').GameState} GameState */
 
@@ -210,6 +211,20 @@ function refreshStats() {
     monsterMax: monster.hp,
     player: state.player,
   });
+  refreshSoloMonsterHpBar(monster);
+}
+
+/** @param {{ hp: number }} monster */
+function refreshSoloMonsterHpBar(monster) {
+  const fill = document.getElementById('enemy-hp-fill');
+  const text = document.getElementById('enemy-hp-text');
+  const hp = Math.max(0, state.monsterHp);
+  const pct = Math.max(0, (hp / monster.hp) * 100);
+  if (fill) {
+    fill.style.width = `${pct}%`;
+    fill.className = `rpg-bar-fill ${hpBarColor(hp, monster.hp)}`;
+  }
+  if (text) text.textContent = `${hp}/${monster.hp}`;
 }
 
 function renderPatternUI(successMeasure = undefined) {
@@ -471,7 +486,8 @@ export function judge(judgment) {
     const bonus = getComboBonus(state.player.combo);
     const dmg = (judgment === 'perfect' ? state.player.atk + bonus + 1 : state.player.atk + bonus);
     state.monsterHp = Math.max(0, state.monsterHp - dmg);
-    setMessage(`공격 성공! ${dmg} 데미지!`);
+    const comboNote = bonus > 0 ? ` (콤보 +${bonus})` : '';
+    setMessage(`공격 성공! ${dmg} 데미지!${comboNote}`);
     shakeMonster(document.getElementById('monster-field-sprite'));
     sounds.attack();
   }
@@ -522,13 +538,14 @@ export function useSkill(skill) {
   if (skill === 'burst') {
     const monster = getCurrentMonster();
     const hpRef = Math.max(monster.hp, state.monsterHp, 1);
-    const base = Math.max(3, Math.ceil(hpRef * 0.08));
-    const comboBonus = Math.min(3, Math.floor(state.player.combo / 3));
-    const dmg = Math.max(3, Math.min(base + comboBonus, Math.ceil(hpRef * 0.18)));
+    const base = Math.max(4, Math.ceil(hpRef * 0.1));
+    const comboBonus = Math.min(4, Math.floor(state.player.combo / 2));
+    const dmg = Math.max(4, Math.min(base + comboBonus, Math.ceil(hpRef * 0.22)));
     sounds.burst();
     setPlayerState('STRUM_DOWN', { autoResetMs: 600 });
     state.monsterHp = Math.max(0, state.monsterHp - dmg);
-    setMessage(`리듬 버스트! ${dmg} 데미지!`);
+    const comboNote = comboBonus > 0 ? ` (콤보 +${comboBonus})` : '';
+    setMessage(`리듬 버스트! ${dmg} 데미지!${comboNote}`);
     burstEffect(els.battleMain);
     const zone = els.particleZone ?? document.getElementById('particle-zone');
     spawnBurstImpact(zone);
@@ -537,7 +554,13 @@ export function useSkill(skill) {
     shakeMonster(document.getElementById('monster-field-sprite'));
     showLightPillar();
     sounds.attack();
-  } else if (skill === 'shield') {
+    refreshStats();
+    saveGame(state);
+    if (state.monsterHp <= 0) handleVictory();
+    return;
+  }
+
+  if (skill === 'shield') {
     shieldActive = true;
     sounds.shield();
     setPlayerState('IDLE');
@@ -554,8 +577,6 @@ export function useSkill(skill) {
 
   refreshStats();
   saveGame(state);
-
-  if (skill === 'burst' && state.monsterHp <= 0) handleVictory();
 }
 
 function handleVictory() {

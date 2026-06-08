@@ -34,6 +34,7 @@ const LEGACY_SAVE_KEY = 'ukulele-rhythm-monster-save';
  * }} GameState */
 
 export const DUEL_HP = 20;
+const SOLO_START_HP = 30;
 
 /** @param {number} level 1=초급 2=중급 3=고급 */
 export function getDuelDifficultyLabel(level) {
@@ -43,8 +44,8 @@ export function getDuelDifficultyLabel(level) {
 export function createInitialPlayer(duelMode = false, duelDifficulty = 2) {
   return {
     level: 1,
-    hp: DUEL_HP,
-    maxHp: DUEL_HP,
+    hp: duelMode ? DUEL_HP : SOLO_START_HP,
+    maxHp: duelMode ? DUEL_HP : SOLO_START_HP,
     atk: 3,
     exp: 0,
     combo: 0,
