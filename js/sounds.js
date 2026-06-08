@@ -50,6 +50,19 @@ export const sounds = {
     beep(880, 0.08);
     setTimeout(() => beep(1100, 0.12), 60);
   },
+  burst: () => {
+    beep(220, 0.06, 'square', 0.18);
+    setTimeout(() => beep(440, 0.08, 'square', 0.15), 40);
+    setTimeout(() => beep(660, 0.1, 'square', 0.12), 90);
+  },
+  shield: () => {
+    beep(520, 0.15, 'sine', 0.12);
+    setTimeout(() => beep(780, 0.2, 'sine', 0.1), 100);
+  },
+  guide: () => {
+    beep(660, 0.1, 'sine', 0.1);
+    setTimeout(() => beep(880, 0.12, 'sine', 0.1), 80);
+  },
 };
 
 export function resumeAudio() {

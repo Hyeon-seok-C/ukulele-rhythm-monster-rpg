@@ -1,7 +1,7 @@
-import { getState } from './battle.js?v=29';
-import { renderWorldMap } from './components/world-map-ui.js?v=29';
-import { getDuelFighterName } from './player-meta.js?v=29';
-import { getDuelDifficultyLabel } from './game-state.js?v=29';
+import { getState } from './battle.js?v=30';
+import { renderWorldMap } from './components/world-map-ui.js?v=30';
+import { getDuelFighterName } from './player-meta.js?v=30';
+import { getDuelDifficultyLabel } from './game-state.js?v=30';
 
 /**
  * @param {HTMLElement} container

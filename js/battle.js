@@ -1,18 +1,18 @@
-import { getMonster, getWorld, getMonstersInWorld, getWorldCount } from './data.js?v=29';
-import { generatePattern } from './rhythm-generator.js?v=29';
-import { renderScore } from './notation.js?v=29';
-import { getComboBonus, getDuelComboBonus, getDuelCombosFromState, addExp, saveGame, DUEL_HP, getDuelDifficultyLabel } from './game-state.js?v=29';
-import { sounds } from './sounds.js?v=29';
-import { renderRhythmCardSlots, spawnSuccessParticle, spawnComboFire, spawnBurstImpact } from './components/rhythm-card.js?v=29';
+import { getMonster, getWorld, getMonstersInWorld, getWorldCount } from './data.js?v=30';
+import { generatePattern } from './rhythm-generator.js?v=30';
+import { renderScore } from './notation.js?v=30';
+import { getComboBonus, getDuelComboBonus, getDuelCombosFromState, addExp, saveGame, DUEL_HP, getDuelDifficultyLabel } from './game-state.js?v=30';
+import { sounds } from './sounds.js?v=30';
+import { renderRhythmCardSlots, spawnSuccessParticle, spawnComboFire, spawnBurstImpact } from './components/rhythm-card.js?v=30';
 import {
   setupDuelFieldCharacters,
   setDuelFieldState,
   setDuelVictoryPose,
   highlightDuelTurn,
   shakeDuelFieldCharacter,
-} from './components/duel-field.js?v=29';
-import { initPlayerHero, setPlayerState, setVictoryPose } from './components/player-hero.js?v=29';
-import { strumToPlayerState, DUEL_OPPONENT_META, DUEL_PLAYER_META, getDuelFighterName } from './player-meta.js?v=29';
+} from './components/duel-field.js?v=30';
+import { initPlayerHero, setPlayerState, setVictoryPose } from './components/player-hero.js?v=30';
+import { strumToPlayerState, DUEL_OPPONENT_META, DUEL_PLAYER_META, getDuelFighterName } from './player-meta.js?v=30';
 import {
   renderBattleScene,
   renderDuelBattleScene,
@@ -22,7 +22,7 @@ import {
   shieldEffect,
   burstEffect,
   updateSkillButtonsUI,
-} from './components/battle-ui.js?v=29';
+} from './components/battle-ui.js?v=30';
 
 /** @typedef {import('./game-state.js').GameState} GameState */
 
@@ -546,11 +546,11 @@ export function useSkill(skill) {
     const combo = Number.isFinite(state.player.combo) ? state.player.combo : 0;
     const comboBonus = Math.min(4, Math.floor(combo / 2));
     const dmg = Math.max(4, Math.min(base + comboBonus, Math.ceil(hpRef * 0.22)));
-    sounds.burst();
-    setPlayerState('STRUM_DOWN', { autoResetMs: 600 });
     state.monsterHp = Math.max(0, state.monsterHp - dmg);
     const comboNote = comboBonus > 0 ? ` (콤보 +${comboBonus})` : '';
     setMessage(`리듬 버스트! ${dmg} 데미지!${comboNote}`);
+    sounds.burst();
+    setPlayerState('STRUM_DOWN', { autoResetMs: 600 });
     burstEffect(els.battleMain);
     const zone = els.particleZone ?? document.getElementById('particle-zone');
     spawnBurstImpact(zone);

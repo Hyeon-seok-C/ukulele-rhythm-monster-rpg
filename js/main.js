@@ -1,11 +1,11 @@
-import { WORLDS, getWorld } from './data.js?v=29';
+import { WORLDS, getWorld } from './data.js?v=30';
 import {
   createNewGame,
   loadGame,
   hasSave,
   saveGame,
   clearSave,
-} from './game-state.js?v=29';
+} from './game-state.js?v=30';
 import {
   initBattle,
   startBattle,
@@ -21,14 +21,14 @@ import {
   resumeBattle,
   setShowCounting,
   setDuelDifficulty,
-} from './battle.js?v=29';
-import { sounds, resumeAudio } from './sounds.js?v=29';
-import { renderPauseMap, showPauseOverlay } from './pause-menu.js?v=29';
-import { renderWorldMap } from './components/world-map-ui.js?v=29';
-import { renderBestiaryGrid } from './components/bestiary-ui.js?v=29';
-import { initTitleHero } from './components/title-hero.js?v=29';
-import { getDuelFighterName } from './player-meta.js?v=29';
-import { DUEL_HP } from './game-state.js?v=29';
+} from './battle.js?v=30';
+import { sounds, resumeAudio } from './sounds.js?v=30';
+import { renderPauseMap, showPauseOverlay } from './pause-menu.js?v=30';
+import { renderWorldMap } from './components/world-map-ui.js?v=30';
+import { renderBestiaryGrid } from './components/bestiary-ui.js?v=30';
+import { initTitleHero } from './components/title-hero.js?v=30';
+import { getDuelFighterName } from './player-meta.js?v=30';
+import { DUEL_HP } from './game-state.js?v=30';
 
 /** @type {import('./game-state.js').GameState} */
 let gameState = createNewGame();

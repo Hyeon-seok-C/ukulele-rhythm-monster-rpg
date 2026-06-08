@@ -1,5 +1,5 @@
-import { EXP_TABLE, PLAYER_CHARACTER } from './data.js?v=29';
-import { DUEL_OPPONENT_META, DUEL_PLAYER_META } from './player-meta.js?v=29';
+import { EXP_TABLE, PLAYER_CHARACTER } from './data.js?v=30';
+import { DUEL_OPPONENT_META, DUEL_PLAYER_META } from './player-meta.js?v=30';
 
 const SAVE_KEY = 'rhythm-monster-rpg-save';
 const DUEL_SAVE_KEY = 'rhythm-monster-rpg-duel-save';
