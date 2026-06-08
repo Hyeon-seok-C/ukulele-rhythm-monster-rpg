@@ -1,18 +1,18 @@
-import { getMonster, getWorld, getMonstersInWorld, getWorldCount } from './data.js?v=28';
-import { generatePattern } from './rhythm-generator.js?v=28';
-import { renderScore } from './notation.js?v=28';
-import { getComboBonus, getDuelComboBonus, getDuelCombosFromState, addExp, saveGame, DUEL_HP, getDuelDifficultyLabel } from './game-state.js?v=28';
-import { sounds } from './sounds.js?v=28';
-import { renderRhythmCardSlots, spawnSuccessParticle, spawnComboFire, spawnBurstImpact } from './components/rhythm-card.js?v=28';
+import { getMonster, getWorld, getMonstersInWorld, getWorldCount } from './data.js?v=29';
+import { generatePattern } from './rhythm-generator.js?v=29';
+import { renderScore } from './notation.js?v=29';
+import { getComboBonus, getDuelComboBonus, getDuelCombosFromState, addExp, saveGame, DUEL_HP, getDuelDifficultyLabel } from './game-state.js?v=29';
+import { sounds } from './sounds.js?v=29';
+import { renderRhythmCardSlots, spawnSuccessParticle, spawnComboFire, spawnBurstImpact } from './components/rhythm-card.js?v=29';
 import {
   setupDuelFieldCharacters,
   setDuelFieldState,
   setDuelVictoryPose,
   highlightDuelTurn,
   shakeDuelFieldCharacter,
-} from './components/duel-field.js?v=28';
-import { initPlayerHero, setPlayerState, setVictoryPose } from './components/player-hero.js?v=28';
-import { strumToPlayerState, DUEL_OPPONENT_META, DUEL_PLAYER_META, getDuelFighterName } from './player-meta.js?v=28';
+} from './components/duel-field.js?v=29';
+import { initPlayerHero, setPlayerState, setVictoryPose } from './components/player-hero.js?v=29';
+import { strumToPlayerState, DUEL_OPPONENT_META, DUEL_PLAYER_META, getDuelFighterName } from './player-meta.js?v=29';
 import {
   renderBattleScene,
   renderDuelBattleScene,
@@ -22,7 +22,7 @@ import {
   shieldEffect,
   burstEffect,
   updateSkillButtonsUI,
-} from './components/battle-ui.js?v=28';
+} from './components/battle-ui.js?v=29';
 
 /** @typedef {import('./game-state.js').GameState} GameState */
 
@@ -60,6 +60,8 @@ export function startBattle(gameState, options = {}) {
   state = gameState;
   if (options.forceDuel) state.player.duelMode = true;
   state.inBattle = true;
+  isPaused = false;
+  answerHidden = false;
   shieldActive = false;
   guideActive = false;
   duelShieldFor = null;
@@ -83,6 +85,7 @@ export function startBattle(gameState, options = {}) {
     const monster = getCurrentMonster();
     state.monsterHp = monster.hp;
     state.player.skillPoints = state.player.maxSkillPoints ?? 3;
+    state.player.combo = 0;
   }
 
   applyBattleTheme();
@@ -475,6 +478,7 @@ export function judge(judgment) {
   } else {
     sounds.success();
     state.player.combo += judgment === 'perfect' ? 2 : 1;
+    state.player.combo = Number.isFinite(state.player.combo) ? state.player.combo : 0;
     showComboEffects();
     setPlayerState(strumToPlayerState(strumGuide, judgment));
 
@@ -539,7 +543,8 @@ export function useSkill(skill) {
     const monster = getCurrentMonster();
     const hpRef = Math.max(monster.hp, state.monsterHp, 1);
     const base = Math.max(4, Math.ceil(hpRef * 0.1));
-    const comboBonus = Math.min(4, Math.floor(state.player.combo / 2));
+    const combo = Number.isFinite(state.player.combo) ? state.player.combo : 0;
+    const comboBonus = Math.min(4, Math.floor(combo / 2));
     const dmg = Math.max(4, Math.min(base + comboBonus, Math.ceil(hpRef * 0.22)));
     sounds.burst();
     setPlayerState('STRUM_DOWN', { autoResetMs: 600 });
@@ -597,6 +602,7 @@ function handleVictory() {
 
 export function fleeBattle() {
   state.inBattle = false;
+  isPaused = false;
   saveGame(state);
 }
 

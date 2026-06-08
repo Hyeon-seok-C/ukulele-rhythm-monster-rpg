@@ -1,5 +1,5 @@
-import { EXP_TABLE, PLAYER_CHARACTER } from './data.js';
-import { DUEL_OPPONENT_META, DUEL_PLAYER_META } from './player-meta.js';
+import { EXP_TABLE, PLAYER_CHARACTER } from './data.js?v=29';
+import { DUEL_OPPONENT_META, DUEL_PLAYER_META } from './player-meta.js?v=29';
 
 const SAVE_KEY = 'rhythm-monster-rpg-save';
 const DUEL_SAVE_KEY = 'rhythm-monster-rpg-duel-save';
@@ -80,6 +80,7 @@ function normalizeSave(data) {
   if (data.player.duelDifficulty == null) data.player.duelDifficulty = 2;
   if (data.player.maxSkillPoints == null) data.player.maxSkillPoints = 3;
   if (data.player.skillPoints == null) data.player.skillPoints = data.player.maxSkillPoints;
+  if (data.player.combo == null || !Number.isFinite(data.player.combo)) data.player.combo = 0;
   if (data.player.duelMode && data.player.playerName === 'A 학생') {
     data.player.playerName = DUEL_PLAYER_META.name;
   }

@@ -1,11 +1,11 @@
-import { WORLDS, getWorld } from './data.js?v=28';
+import { WORLDS, getWorld } from './data.js?v=29';
 import {
   createNewGame,
   loadGame,
   hasSave,
   saveGame,
   clearSave,
-} from './game-state.js?v=28';
+} from './game-state.js?v=29';
 import {
   initBattle,
   startBattle,
@@ -21,14 +21,14 @@ import {
   resumeBattle,
   setShowCounting,
   setDuelDifficulty,
-} from './battle.js?v=28';
-import { sounds, resumeAudio } from './sounds.js?v=28';
-import { renderPauseMap, showPauseOverlay } from './pause-menu.js?v=28';
-import { renderWorldMap } from './components/world-map-ui.js?v=28';
-import { renderBestiaryGrid } from './components/bestiary-ui.js?v=28';
-import { initTitleHero } from './components/title-hero.js?v=28';
-import { getDuelFighterName } from './player-meta.js?v=28';
-import { DUEL_HP } from './game-state.js?v=28';
+} from './battle.js?v=29';
+import { sounds, resumeAudio } from './sounds.js?v=29';
+import { renderPauseMap, showPauseOverlay } from './pause-menu.js?v=29';
+import { renderWorldMap } from './components/world-map-ui.js?v=29';
+import { renderBestiaryGrid } from './components/bestiary-ui.js?v=29';
+import { initTitleHero } from './components/title-hero.js?v=29';
+import { getDuelFighterName } from './player-meta.js?v=29';
+import { DUEL_HP } from './game-state.js?v=29';
 
 /** @type {import('./game-state.js').GameState} */
 let gameState = createNewGame();
@@ -92,10 +92,8 @@ function renderWorldScreen() {
 }
 
 function enterBattle() {
-  if (!gameState.player.duelMode) {
-    gameState.player.duelMode = false;
-    gameState.duelOpponent = null;
-  }
+  gameState.player.duelMode = false;
+  gameState.duelOpponent = null;
   showScreen('battle');
   syncBattleChromeForMode();
   startBattle(gameState);
@@ -299,6 +297,8 @@ document.querySelectorAll('[data-duel-diff]').forEach((btn) => {
 });
 bindClick('btn-flee', () => {
   const wasDuel = gameState.player.duelMode;
+  resumeBattle();
+  showPauseOverlay(false);
   fleeBattle();
   if (wasDuel) {
     clearSave();

@@ -1,8 +1,8 @@
-import { renderSystemIcon } from '../system-icons.js';
-import { getNextLevelExp } from '../game-state.js';
-import { getWorldScene, getDuelScene } from '../world-backgrounds.js';
-import { getMonsterFieldBottom, renderMonsterPortrait } from '../monster-meta.js';
-import { DUEL_OPPONENT_META, DUEL_PLAYER_META } from '../player-meta.js';
+import { renderSystemIcon } from '../system-icons.js?v=29';
+import { getNextLevelExp } from '../game-state.js?v=29';
+import { getWorldScene, getDuelScene } from '../world-backgrounds.js?v=29';
+import { getMonsterFieldBottom, renderMonsterPortrait } from '../monster-meta.js?v=29';
+import { DUEL_OPPONENT_META, DUEL_PLAYER_META } from '../player-meta.js?v=29';
 
 /** @param {number} current @param {number} max @returns {string} */
 export function hpBarColor(current, max) {
@@ -182,7 +182,7 @@ export function updateBattleStatsUI(hudRoot, stats) {
   const expFill = hudRoot?.querySelector('#player-exp-fill');
   const hpText = hudRoot?.querySelector('#player-hp-text') ?? document.getElementById('player-hp-text');
   const expText = hudRoot?.querySelector('#player-exp-text');
-  const comboEl = hudRoot?.querySelector('#combo-display');
+  const comboEl = hudRoot?.querySelector('#combo-display') ?? document.getElementById('combo-display');
 
   if (enemyFill) {
     const pct = Math.max(0, (stats.monsterHp / stats.monsterMax) * 100);
