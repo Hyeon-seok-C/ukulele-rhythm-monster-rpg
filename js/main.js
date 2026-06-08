@@ -27,7 +27,6 @@ import { renderPauseMap, showPauseOverlay } from './pause-menu.js';
 import { renderWorldMap } from './components/world-map-ui.js';
 import { renderBestiaryGrid } from './components/bestiary-ui.js';
 import { initTitleHero } from './components/title-hero.js';
-import { ensureSiteAccess } from './site-gate.js';
 import { getDuelFighterName } from './player-meta.js';
 import { DUEL_HP } from './game-state.js';
 
@@ -346,9 +345,7 @@ function updateContinueButton() {
 
 updateContinueButton();
 
-async function boot() {
-  await ensureSiteAccess();
-
+function boot() {
   if (window.innerWidth > 720) {
     document.getElementById('teacher-panel')?.classList.add('open');
   }

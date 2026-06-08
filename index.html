@@ -32,10 +32,31 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/art-tokens.css" />
   <link rel="stylesheet" href="css/styles.css" />
+  <script src="js/access-config.js?v=gate1"></script>
+  <script>
+    (function () {
+      if (location.protocol === 'file:') return;
+      var host = location.hostname;
+      if (host === 'localhost' || host === '127.0.0.1' || host === '[::1]') return;
+      var key = (window.ACCESS_GATE_CONFIG && window.ACCESS_GATE_CONFIG.storageKey) || 'ukulele-rhythm-monster-auth';
+      try {
+        if (sessionStorage.getItem(key) === '1') return;
+      } catch (e) { /* ignore */ }
+      document.documentElement.classList.add('access-gate-pending');
+    })();
+  </script>
 </head>
 <body>
+  <div id="access-gate" class="site-gate-overlay" hidden>
+    <div class="site-gate-box">
+      <h2>🔒 리듬 몬스터 RPG</h2>
+      <p>접속 코드를 입력하세요</p>
+      <input type="password" id="access-gate-input" class="site-gate-input" inputmode="numeric" autocomplete="off" maxlength="32" placeholder="PIN" />
+      <button type="button" class="btn btn-primary btn-lg" id="access-gate-submit">입장</button>
+      <p class="site-gate-hint hidden" id="access-gate-error">코드가 올바르지 않습니다</p>
+    </div>
+  </div>
   <div id="file-launch-hint" hidden>
     <div class="file-launch-box">
       <h2>리듬 몬스터 RPG</h2>
@@ -210,6 +231,7 @@
       }
     })();
   </script>
-  <script type="module" src="js/main.js?v=duel16"></script>
+  <script src="js/access-gate.js?v=gate1"></script>
+  <script type="module" src="js/main.js?v=gate1"></script>
 </body>
 </html>

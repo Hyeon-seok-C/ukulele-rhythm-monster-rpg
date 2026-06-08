@@ -1480,7 +1480,11 @@ body {
 
 #vexflow-output { min-height: 72px; overflow: hidden; }
 
-/* 웹 배포 — 접속 코드 (선택) */
+/* 웹 배포 — 접속 PIN (원격 HTTPS/HTTP만) */
+html.access-gate-pending #app,
+html.access-gate-pending #fx-layer {
+  display: none !important;
+}
 .site-gate-overlay {
   position: fixed;
   inset: 0;
