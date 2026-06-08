@@ -28,7 +28,7 @@ export function getMonsterImagePath(id) {
 
 /** @param {string} id @param {string} emoji @param {{ compact?: boolean }} [opts] */
 export function renderMonsterPortrait(id, emoji, opts = {}) {
-  const tier = id === 'metronome_king' ? 'final' : (id.includes('boss') || ['beat_bear', 'cave_orc', 'beat_phoenix', 'tempo_lord', 'metronome_king'].includes(id) ? 'boss' : 'normal');
+  const tier = id === 'metronome_king' ? 'final' : (id.includes('boss') || ['beat_bear', 'cave_orc', 'beat_phoenix', 'tempo_lord', 'chrono_dragon', 'metronome_king'].includes(id) ? 'boss' : 'normal');
   const compact = opts.compact ? ' monster-sprite-wrap--compact' : '';
   const imagePath = getMonsterImagePath(id);
 

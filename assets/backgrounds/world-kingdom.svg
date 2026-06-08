@@ -1,12 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" preserveAspectRatio="xMidYMax slice">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#f1c40f"/>
-      <stop offset="55%" stop-color="#f39c12"/>
-      <stop offset="100%" stop-color="#3498db"/>
+    <linearGradient id="king-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3498db"/>
+      <stop offset="100%" stop-color="#f1c40f"/>
+    </linearGradient>
+    <linearGradient id="gold-ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f39c12"/>
+      <stop offset="100%" stop-color="#e67e22"/>
     </linearGradient>
   </defs>
-  <rect width="800" height="450" fill="url(#bg)"/>
-  <ellipse cx="400" cy="420" rx="320" ry="28" fill="rgba(0,0,0,0.18)"/>
-  <text x="400" y="60" text-anchor="middle" font-family="Nunito,sans-serif" font-size="28" font-weight="800" fill="rgba(255,255,255,0.35)">왕국</text>
+  <rect width="800" height="450" fill="url(#king-sky)"/>
+  <circle cx="650" cy="75" r="45" fill="#FFE066"/>
+  <ellipse cx="150" cy="100" rx="75" ry="26" fill="#fff" opacity="0.85"/>
+  <path d="M0 290 Q400 250 800 285 L800 450 L0 450 Z" fill="url(#gold-ground)"/>
+  <rect x="320" y="170" width="160" height="120" fill="#f8c471" stroke="#d68910" stroke-width="4"/>
+  <rect x="300" y="200" width="35" height="90" fill="#e59866"/>
+  <rect x="465" y="200" width="35" height="90" fill="#e59866"/>
+  <polygon points="300,200 317,160 335,200" fill="#e59866"/>
+  <polygon points="465,200 482,160 500,200" fill="#e59866"/>
+  <polygon points="320,170 400,110 480,170" fill="#f5b041"/>
+  <circle cx="400" cy="115" r="12" fill="#f1c40f" stroke="#d68910" stroke-width="2"/>
+  <ellipse cx="400" cy="420" rx="300" ry="26" fill="rgba(0,0,0,0.18)"/>
 </svg>

@@ -35,7 +35,7 @@ export function renderWorldMap(root, options) {
 
   root.innerHTML = `
     <div class="world-map-wrap${compact ? ' world-map-wrap--compact' : ''}">
-      <div class="world-map-canvas" id="world-map-canvas">
+      <div class="world-map-canvas" id="world-map-canvas" style="--world-map-bg: url('${detail.bg}')">
         <svg class="world-map-path" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
           <polyline class="world-map-path-line world-map-path-line--bg"
             points="${NODE_LAYOUT.map((p) => `${p.x},${p.y}`).join(' ')}" />
@@ -48,14 +48,16 @@ export function renderWorldMap(root, options) {
           const selected = world.id === selectedId;
           const current = world.id === currentWorldId;
           const clickable = mode === 'select' && !locked;
+          const nodeScene = getWorldScene(world.id);
           return `
             <button type="button"
               class="world-map-node${clickable ? ' world-map-node--clickable' : ''}${selected ? ' world-map-node--selected' : ''}${current ? ' world-map-node--current' : ''}${locked ? ' world-map-node--locked' : ''}"
               data-world-id="${world.id}"
-              style="left:${pos.x}%; top:${pos.y}%;"
+              style="left:${pos.x}%; top:${pos.y}%; --node-color:${world.theme === 'theme-boss' ? '#ffeaa7' : '#74b9ff'};"
               ${locked ? 'disabled' : ''}
               aria-label="${world.name}">
               <span class="world-map-node-ring"></span>
+              <span class="world-map-node-thumb" style="background-image:url('${nodeScene.mapIcon}')"></span>
               <span class="world-map-node-num">${world.id}</span>
               <span class="world-map-node-label">${world.name}</span>
               ${current ? '<span class="world-map-player-pin" aria-hidden="true">📍</span>' : ''}

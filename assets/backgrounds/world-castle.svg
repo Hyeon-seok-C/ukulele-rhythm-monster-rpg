@@ -1,12 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" preserveAspectRatio="xMidYMax slice">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#1b2631"/>
-      <stop offset="55%" stop-color="#34495e"/>
-      <stop offset="100%" stop-color="#7f8c8d"/>
+    <linearGradient id="night" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0b1320"/>
+      <stop offset="100%" stop-color="#1b2631"/>
     </linearGradient>
   </defs>
-  <rect width="800" height="450" fill="url(#bg)"/>
-  <ellipse cx="400" cy="420" rx="320" ry="28" fill="rgba(0,0,0,0.18)"/>
-  <text x="400" y="60" text-anchor="middle" font-family="Nunito,sans-serif" font-size="28" font-weight="800" fill="rgba(255,255,255,0.35)">성</text>
+  <rect width="800" height="450" fill="url(#night)"/>
+  <circle cx="120" cy="60" r="3" fill="#fff" opacity="0.9"/>
+  <circle cx="200" cy="40" r="2" fill="#fff" opacity="0.7"/>
+  <circle cx="350" cy="55" r="2.5" fill="#fff" opacity="0.8"/>
+  <circle cx="520" cy="35" r="2" fill="#fff" opacity="0.75"/>
+  <circle cx="680" cy="50" r="3" fill="#fff" opacity="0.85"/>
+  <path d="M0 300 Q400 260 800 300 L800 450 L0 450 Z" fill="#2c3e50"/>
+  <rect x="280" y="180" width="240" height="140" fill="#34495e"/>
+  <rect x="250" y="210" width="40" height="110" fill="#2c3e50"/>
+  <rect x="510" y="210" width="40" height="110" fill="#2c3e50"/>
+  <rect x="370" y="140" width="60" height="180" fill="#3d566e"/>
+  <polygon points="250,210 270,170 290,210" fill="#2c3e50"/>
+  <polygon points="510,210 530,170 550,210" fill="#2c3e50"/>
+  <polygon points="370,140 400,90 430,140" fill="#3d566e"/>
+  <rect x="395" y="250" width="30" height="70" fill="#1a252f"/>
+  <ellipse cx="400" cy="420" rx="280" ry="24" fill="rgba(0,0,0,0.4)"/>
 </svg>
