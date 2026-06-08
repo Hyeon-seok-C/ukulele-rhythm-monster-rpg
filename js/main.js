@@ -21,7 +21,7 @@ import {
   resumeBattle,
   setShowCounting,
   setDuelDifficulty,
-} from './battle.js?v=25';
+} from './battle.js?v=26';
 import { sounds, resumeAudio } from './sounds.js';
 import { renderPauseMap, showPauseOverlay } from './pause-menu.js';
 import { renderWorldMap } from './components/world-map-ui.js';

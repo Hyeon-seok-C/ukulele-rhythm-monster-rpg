@@ -44,7 +44,6 @@ let onMessage = () => {};
 const els = {};
 
 const DUEL_ATK = 3;
-const DUEL_MISS_SELF = 2;
 
 export function initBattle(ui, callbacks) {
   Object.assign(els, ui);
@@ -327,13 +326,7 @@ function judgeDuel(judgment) {
     setDuelCombo(attacker, 0);
     setDuelFieldState(attacker, 'DAMAGE');
     shakeDuelFieldCharacter(attacker);
-
-    if (attacker === 'A') {
-      state.player.hp = Math.max(0, state.player.hp - DUEL_MISS_SELF);
-    } else if (state.duelOpponent) {
-      state.duelOpponent.hp = Math.max(0, state.duelOpponent.hp - DUEL_MISS_SELF);
-    }
-    setMessage(`${getDuelFighterName(attacker)} 실수! ${DUEL_MISS_SELF} 데미지`);
+    setMessage(`${getDuelFighterName(attacker)} 실수! 공격 실패`);
   } else {
     sounds.success();
     setDuelCombo(attacker, getDuelCombo(attacker) + (judgment === 'perfect' ? 2 : 1));
