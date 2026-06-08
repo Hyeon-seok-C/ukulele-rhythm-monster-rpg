@@ -12,6 +12,19 @@ export const WORLDS = /** @type {World[]} */ ([
 
 export const EXP_TABLE = [0, 10, 25, 50, 80, 120, 170, 230, 300, 400];
 
+export const PLAYER_CHARACTER = {
+  id: 'adventure_boy',
+  name: '모험가 소년',
+  nameEn: 'Adventure Boy',
+  gender: 'boy',
+  role: 'hero',
+  appearance: '우쿨렐레를 든 리듬 모험가',
+  personality: '밝고 용감한',
+  imagePath: 'assets/images/player_hero.png',
+  battleSpritePath: 'assets/images/player_hero.png',
+  titleHeroPath: 'assets/images/player_hero.png',
+};
+
 export const MONSTERS = /** @type {Record<number, Monster[]>} */ ({
   1: [
     { id: 'slime', name: '슬라임', emoji: '🟢', hp: 15, atk: 2, exp: 8 },
@@ -51,7 +64,7 @@ export const MONSTERS = /** @type {Record<number, Monster[]>} */ ({
     { id: 'rhythm_golem', name: '리듬골렘', emoji: '🗿', hp: 48, atk: 9, exp: 35 },
     { id: 'chrono_dragon', name: '크로노드래곤', emoji: '🐲', hp: 52, atk: 10, exp: 38 },
     { id: 'harmonic_king', name: '하모닉킹', emoji: '👑', hp: 55, atk: 10, exp: 40 },
-    { id: 'metronome_king', name: '메트로놈 킹', emoji: '🎵', hp: 100, atk: 12, exp: 100, isBoss: true, bossRule: 'max_difficulty' },
+    { id: 'metronome_king', name: '메트로놈 킹', emoji: '🎵', hp: 100, atk: 12, exp: 100, isBoss: true, isFinalBoss: true, bossRule: 'max_difficulty' },
   ],
 });
 
@@ -62,4 +75,12 @@ export function getMonster(worldId, index) {
 
 export function getWorld(id) {
   return WORLDS.find((w) => w.id === id) ?? WORLDS[0];
+}
+
+export function getMonstersInWorld(worldId) {
+  return MONSTERS[worldId]?.length ?? 0;
+}
+
+export function getWorldCount() {
+  return WORLDS.length;
 }
