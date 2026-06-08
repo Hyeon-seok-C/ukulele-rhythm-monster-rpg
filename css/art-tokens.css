@@ -1,0 +1,15 @@
+/* Minimal art tokens — matches ART_STYLE_GUIDE / styles.css usage */
+:root {
+  --art-outline-soft: #2d3436;
+  --art-outline-width: 3px;
+  --art-radius-md: 12px;
+  --art-radius-xl: 20px;
+  --art-shadow-color: rgba(0, 0, 0, 0.25);
+  --art-shadow-depth: 4px;
+
+  --monster-normal-h: 96px;
+  --monster-boss-h: 120px;
+  --monster-final-h: 140px;
+  --monster-hud-h: 48px;
+  --monster-shadow: 0 8px 0 rgba(0, 0, 0, 0.2);
+}
