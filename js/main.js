@@ -21,7 +21,7 @@ import {
   resumeBattle,
   setShowCounting,
   setDuelDifficulty,
-} from './battle.js?v=26';
+} from './battle.js?v=27';
 import { sounds, resumeAudio } from './sounds.js';
 import { renderPauseMap, showPauseOverlay } from './pause-menu.js';
 import { renderWorldMap } from './components/world-map-ui.js';
@@ -203,9 +203,9 @@ bindClick('btn-world-start', () => startWorldBattle(selectedWorldId));
 bindClick('btn-judge-perfect', () => { judge('perfect'); syncGameStateFromBattle(); });
 bindClick('btn-judge-good', () => { judge('good'); syncGameStateFromBattle(); });
 bindClick('btn-judge-miss', () => { judge('miss'); syncGameStateFromBattle(); });
-bindClick('btn-skill-burst', () => useSkill('burst'));
-bindClick('btn-skill-shield', () => useSkill('shield'));
-bindClick('btn-skill-guide', () => useSkill('guide'));
+bindClick('btn-skill-burst', () => { useSkill('burst'); syncGameStateFromBattle(); });
+bindClick('btn-skill-shield', () => { useSkill('shield'); syncGameStateFromBattle(); });
+bindClick('btn-skill-guide', () => { useSkill('guide'); syncGameStateFromBattle(); });
 bindClick('btn-regenerate', () => newPattern());
 bindClick('btn-hide-answer', () => setAnswerHidden(true));
 bindClick('btn-show-answer', () => setAnswerHidden(false));

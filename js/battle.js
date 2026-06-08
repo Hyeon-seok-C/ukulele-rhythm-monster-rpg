@@ -1,7 +1,7 @@
 import { getMonster, getWorld, getMonstersInWorld, getWorldCount } from './data.js';
 import { generatePattern } from './rhythm-generator.js';
 import { renderScore } from './notation.js';
-import { getComboBonus, getDuelComboBonus, getDuelCombosFromState, addExp, saveGame, DUEL_HP, getDuelDifficultyLabel } from './game-state.js?v=25';
+import { getComboBonus, getDuelComboBonus, getDuelCombosFromState, addExp, saveGame, DUEL_HP, getDuelDifficultyLabel } from './game-state.js?v=27';
 import { sounds } from './sounds.js';
 import { renderRhythmCardSlots, spawnSuccessParticle, spawnComboFire, spawnBurstImpact } from './components/rhythm-card.js';
 import {
@@ -21,7 +21,7 @@ import {
   shieldEffect,
   burstEffect,
   updateSkillButtonsUI,
-} from './components/battle-ui.js?v=25';
+} from './components/battle-ui.js?v=27';
 
 /** @typedef {import('./game-state.js').GameState} GameState */
 
@@ -37,6 +37,8 @@ let isPaused = false;
 let scoreZoom = 1;
 let shieldActive = false;
 let guideActive = false;
+/** @type {'A'|'B'|null} */
+let duelShieldFor = null;
 let onVictory = () => {};
 let onDefeat = () => {};
 let onMessage = () => {};
@@ -59,11 +61,12 @@ export function startBattle(gameState, options = {}) {
   state.inBattle = true;
   shieldActive = false;
   guideActive = false;
+  duelShieldFor = null;
 
   if (state.player.duelMode) {
     state.player.duelMode = true;
     state.player.playerName = DUEL_PLAYER_META.name;
-    state.player.skillPoints = 0;
+    state.player.skillPoints = state.player.maxSkillPoints ?? 3;
     state.monsterHp = 0;
     state.player.monsterIndex = 0;
     if (!state.duelOpponent) {
@@ -156,8 +159,8 @@ function renderFullBattleUI() {
     els.duelIndicator?.classList.remove('hidden');
     updateDuelIndicator();
 
-    document.querySelector('.skill-btns')?.classList.add('hidden');
-    document.getElementById('skill-points-label')?.closest('p')?.classList.add('hidden');
+    document.querySelector('.skill-btns')?.classList.remove('hidden');
+    document.getElementById('skill-points-label')?.closest('p')?.classList.remove('hidden');
     document.getElementById('teacher-duel-diff')?.classList.remove('hidden');
     syncDuelDifficultyUI(player.duelDifficulty ?? 2);
   } else {
@@ -306,6 +309,80 @@ function setDuelCombo(side, value) {
   else if (state.duelOpponent) state.duelOpponent.combo = Math.max(0, value);
 }
 
+/** @returns {boolean} duel ended */
+function checkDuelEndAfterDamage() {
+  if (state.duelOpponent && state.duelOpponent.hp <= 0) {
+    handleDuelVictory('A');
+    return true;
+  }
+  if (state.player.hp <= 0) {
+    handleDuelVictory('B');
+    return true;
+  }
+  return false;
+}
+
+/**
+ * @param {'A'|'B'} attacker
+ * @param {number} dmg
+ * @returns {boolean} damage applied
+ */
+function applyDuelDamage(attacker, dmg) {
+  const defender = attacker === 'A' ? 'B' : 'A';
+  if (duelShieldFor === defender) {
+    duelShieldFor = null;
+    shieldEffect(els.battleMain);
+    setMessage(`${getDuelFighterName(defender)} 리듬 쉴드! 공격을 막았습니다!`);
+    return false;
+  }
+  if (attacker === 'A' && state.duelOpponent) {
+    state.duelOpponent.hp = Math.max(0, state.duelOpponent.hp - dmg);
+    shakeDuelFieldCharacter('B');
+  } else {
+    state.player.hp = Math.max(0, state.player.hp - dmg);
+    shakeDuelFieldCharacter('A');
+  }
+  return true;
+}
+
+/** @param {'burst'|'shield'|'guide'} skill */
+function useDuelSkill(skill) {
+  const attacker = state.player.duelAttacker;
+
+  if (skill === 'burst') {
+    const comboBonus = Math.min(2, Math.floor(getDuelCombo(attacker) / 3));
+    const dmg = 5 + comboBonus;
+    sounds.burst();
+    setDuelFieldState(attacker, 'STRUM_DOWN', { autoResetMs: 600 });
+    if (applyDuelDamage(attacker, dmg)) {
+      setMessage(`${getDuelFighterName(attacker)} 리듬 버스트! ${dmg} 데미지!`);
+    }
+    burstEffect(els.battleMain);
+    const zone = els.particleZone ?? document.getElementById('particle-zone');
+    spawnBurstImpact(zone);
+    els.battleMain?.classList.add('screen-shake');
+    setTimeout(() => els.battleMain?.classList.remove('screen-shake'), 500);
+    sounds.attack();
+  } else if (skill === 'shield') {
+    duelShieldFor = attacker;
+    sounds.shield();
+    setDuelFieldState(attacker, 'IDLE', { autoResetMs: 0 });
+    shieldEffect(els.battleMain);
+    setMessage(`${getDuelFighterName(attacker)} 리듬 쉴드! 다음 피해 1회를 막습니다!`);
+  } else if (skill === 'guide') {
+    guideActive = true;
+    answerHidden = false;
+    renderPatternUI();
+    sounds.guide();
+    setDuelFieldState(attacker, 'PERFECT', { autoResetMs: 800 });
+    setMessage(`${getDuelFighterName(attacker)} 마스터 가이드! 스트럼 정답을 확인하세요.`);
+  }
+
+  refreshStats();
+  saveGame(state);
+  if (skill === 'burst') checkDuelEndAfterDamage();
+}
+
 /** @param {'A'|'B'} winner */
 function handleDuelVictory(winner) {
   state.inBattle = false;
@@ -341,13 +418,7 @@ function judgeDuel(judgment) {
 
     const comboBonus = getDuelComboBonus(attackerCombo);
     const dmg = getDuelDamage(judgment, attackerCombo);
-    if (attacker === 'A' && state.duelOpponent) {
-      state.duelOpponent.hp = Math.max(0, state.duelOpponent.hp - dmg);
-      shakeDuelFieldCharacter('B');
-    } else {
-      state.player.hp = Math.max(0, state.player.hp - dmg);
-      shakeDuelFieldCharacter('A');
-    }
+    applyDuelDamage(attacker, dmg);
     const comboNote = comboBonus > 0 ? ` (콤보 +${comboBonus})` : '';
     setMessage(`${getDuelFighterName(attacker)} 공격! ${dmg} 데미지!${comboNote}`);
     sounds.attack();
@@ -356,14 +427,7 @@ function judgeDuel(judgment) {
   refreshStats();
   saveGame(state);
 
-  if (state.duelOpponent && state.duelOpponent.hp <= 0) {
-    handleDuelVictory('A');
-    return;
-  }
-  if (state.player.hp <= 0) {
-    handleDuelVictory('B');
-    return;
-  }
+  if (checkDuelEndAfterDamage()) return;
 
   state.player.duelAttacker = attacker === 'A' ? 'B' : 'A';
   updateDuelIndicator();
@@ -434,9 +498,12 @@ export function judge(judgment) {
 
 /** @param {'burst'|'shield'|'guide'} skill */
 export function useSkill(skill) {
-  if (!state?.inBattle || isPaused) return;
-  if (state.player.duelMode) {
-    setMessage('2인 대결에서는 특수기를 사용할 수 없습니다.');
+  if (!state?.inBattle) {
+    setMessage('전투 중에만 스킬을 사용할 수 있습니다.');
+    return;
+  }
+  if (isPaused) {
+    setMessage('일시정지 중에는 스킬을 사용할 수 없습니다.');
     return;
   }
   if (state.player.skillPoints <= 0) {
@@ -447,11 +514,17 @@ export function useSkill(skill) {
   state.player.skillPoints -= 1;
   updateSkillButtonsUI(state.player.skillPoints, state.player.maxSkillPoints);
 
+  if (state.player.duelMode) {
+    useDuelSkill(skill);
+    return;
+  }
+
   if (skill === 'burst') {
     const monster = getCurrentMonster();
-    const base = Math.max(2, Math.ceil(monster.hp * 0.06));
-    const comboBonus = Math.min(2, Math.floor(state.player.combo / 4));
-    const dmg = Math.min(base + comboBonus, Math.ceil(monster.hp * 0.12));
+    const hpRef = Math.max(monster.hp, state.monsterHp, 1);
+    const base = Math.max(3, Math.ceil(hpRef * 0.08));
+    const comboBonus = Math.min(3, Math.floor(state.player.combo / 3));
+    const dmg = Math.max(3, Math.min(base + comboBonus, Math.ceil(hpRef * 0.18)));
     sounds.burst();
     setPlayerState('STRUM_DOWN', { autoResetMs: 600 });
     state.monsterHp = Math.max(0, state.monsterHp - dmg);
