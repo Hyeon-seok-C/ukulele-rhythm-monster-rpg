@@ -22,7 +22,6 @@ export function renderDuelBattleScene(sceneContainer, hudContainer, data) {
   const { opponentHp, opponentMax, player } = data;
   const duelCombos = data.duelCombos ?? { A: 0, B: 0 };
   const duelAttacker = data.duelAttacker ?? 'A';
-  const activeCombo = duelCombos[duelAttacker] ?? 0;
   const sceneInfo = getDuelScene();
   const bHpPct = Math.max(0, (opponentHp / opponentMax) * 100);
   const bBar = hpBarColor(opponentHp, opponentMax);
@@ -77,8 +76,14 @@ export function renderDuelBattleScene(sceneContainer, hudContainer, data) {
 
   hudContainer.innerHTML = `
     <div class="battle-hud-panel battle-hud-duel battle-hud-duel-rhythm">
-      <div class="combo-banner ${activeCombo >= 3 ? 'combo-active' : ''}" id="combo-display">
-        ${activeCombo > 0 ? `${activeCombo}X` : '0X'} COMBO!
+      <div class="duel-combo-banner" id="combo-display">
+        <span class="duel-combo-side ${duelAttacker === 'A' ? 'duel-combo-side-active' : ''}" id="duel-combo-line-a">
+          ${DUEL_PLAYER_META.name} <strong id="duel-combo-a-val">${duelCombos.A}X</strong>
+        </span>
+        <span class="duel-combo-sep">|</span>
+        <span class="duel-combo-side ${duelAttacker === 'B' ? 'duel-combo-side-active' : ''}" id="duel-combo-line-b">
+          ${DUEL_OPPONENT_META.name} <strong id="duel-combo-b-val">${duelCombos.B}X</strong>
+        </span>
       </div>
       <div class="rhythm-panel">
         <p class="rhythm-panel-title">🎵 리듬 악보 · 4/4 · 1·2·3·4박</p>
@@ -203,15 +208,20 @@ export function updateBattleStatsUI(hudRoot, stats) {
   if (comboEl) {
     if (stats.duelMode && stats.duelCombos) {
       const attacker = stats.duelAttacker ?? 'A';
-      const cur = stats.duelCombos[attacker] ?? 0;
-      comboEl.textContent = `${cur}X COMBO!`;
-      comboEl.classList.toggle('combo-active', cur >= 3);
+      const combos = stats.duelCombos;
       ['A', 'B'].forEach((side) => {
+        const n = combos[side] ?? 0;
         const tag = document.getElementById(`duel-combo-${side.toLowerCase()}`);
-        const n = stats.duelCombos[side] ?? 0;
         if (tag) {
           tag.textContent = `${n}X COMBO`;
           tag.classList.toggle('duel-combo-active', n >= 3);
+        }
+        const val = document.getElementById(`duel-combo-${side.toLowerCase()}-val`);
+        if (val) val.textContent = `${n}X`;
+        const line = document.getElementById(`duel-combo-line-${side.toLowerCase()}`);
+        if (line) {
+          line.classList.toggle('duel-combo-side-active', side === attacker);
+          line.classList.toggle('duel-combo-hot', n >= 3);
         }
       });
     } else {

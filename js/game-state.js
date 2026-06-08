@@ -20,15 +20,15 @@ const LEGACY_SAVE_KEY = 'ukulele-rhythm-monster-save';
  *   playerName: string,
  *   skillPoints: number,
  *   maxSkillPoints: number,
+ *   duelCombo?: number,
  * }} PlayerState */
 
-/** @typedef {{ hp: number, maxHp: number, name: string }} DuelOpponent */
+/** @typedef {{ hp: number, maxHp: number, name: string, combo?: number }} DuelOpponent */
 
 /** @typedef {{
  *   player: PlayerState,
  *   monsterHp: number,
  *   duelOpponent: DuelOpponent|null,
- *   duelCombos: { A: number, B: number }|null,
  *   lastPatternKey: string|null,
  *   inBattle: boolean,
  * }} GameState */
@@ -56,6 +56,7 @@ export function createInitialPlayer(duelMode = false, duelDifficulty = 2) {
     playerName: duelMode ? DUEL_PLAYER_META.name : PLAYER_CHARACTER.name,
     skillPoints: 3,
     maxSkillPoints: 3,
+    duelCombo: duelMode ? 0 : undefined,
   };
 }
 
@@ -65,9 +66,8 @@ export function createNewGame(duelMode = false, duelDifficulty = 2) {
     player: createInitialPlayer(duelMode, duelDifficulty),
     monsterHp: 0,
     duelOpponent: duelMode
-      ? { hp: DUEL_HP, maxHp: DUEL_HP, name: DUEL_OPPONENT_META.name }
+      ? { hp: DUEL_HP, maxHp: DUEL_HP, name: DUEL_OPPONENT_META.name, combo: 0 }
       : null,
-    duelCombos: duelMode ? { A: 0, B: 0 } : null,
     lastPatternKey: null,
     inBattle: false,
   };
@@ -83,13 +83,19 @@ function normalizeSave(data) {
     data.player.playerName = DUEL_PLAYER_META.name;
   }
   if (data.player.duelMode && !data.duelOpponent) {
-    data.duelOpponent = { hp: DUEL_HP, maxHp: DUEL_HP, name: DUEL_OPPONENT_META.name };
+    data.duelOpponent = { hp: DUEL_HP, maxHp: DUEL_HP, name: DUEL_OPPONENT_META.name, combo: 0 };
   } else if (data.duelOpponent?.name === 'B 학생') {
     data.duelOpponent.name = DUEL_OPPONENT_META.name;
   }
-  if (data.player.duelMode && !data.duelCombos) {
-    data.duelCombos = { A: 0, B: 0 };
+  if (data.player.duelMode) {
+    if (data.player.duelCombo == null) {
+      data.player.duelCombo = /** @type {{ A?: number }} */ (data).duelCombos?.A ?? 0;
+    }
+    if (data.duelOpponent && data.duelOpponent.combo == null) {
+      data.duelOpponent.combo = /** @type {{ B?: number }} */ (data).duelCombos?.B ?? 0;
+    }
   }
+  delete /** @type {{ duelCombos?: unknown }} */ (data).duelCombos;
   return data;
 }
 
@@ -111,6 +117,24 @@ export function getComboBonus(combo) {
   if (combo >= 5) return 2;
   if (combo >= 3) return 1;
   return 0;
+}
+
+/** 2인 대결 — 콤보 보너스 (턴제라 기준을 낮춤) */
+export function getDuelComboBonus(combo) {
+  if (combo >= 10) return 5;
+  if (combo >= 7) return 4;
+  if (combo >= 5) return 3;
+  if (combo >= 3) return 2;
+  if (combo >= 2) return 1;
+  return 0;
+}
+
+/** @param {GameState} gameState @returns {{ A: number, B: number }} */
+export function getDuelCombosFromState(gameState) {
+  return {
+    A: gameState.player.duelCombo ?? 0,
+    B: gameState.duelOpponent?.combo ?? 0,
+  };
 }
 
 /**

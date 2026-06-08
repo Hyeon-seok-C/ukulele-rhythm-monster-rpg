@@ -781,6 +781,33 @@ body {
 .duel-combo-tag.duel-combo-active {
   color: #e17055;
 }
+.duel-combo-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #636e72;
+  background: #fff;
+  border: 3px solid #2d3436;
+  border-radius: 12px;
+}
+.duel-combo-side strong {
+  font-size: 15px;
+  color: #2d3436;
+}
+.duel-combo-side.duel-combo-side-active strong {
+  color: #0984e3;
+}
+.duel-combo-side.duel-combo-hot strong {
+  color: #e17055;
+}
+.duel-combo-sep {
+  opacity: 0.35;
+  font-weight: 900;
+}
 .duel-top-divider {
   align-self: center;
   font-size: 1.1rem;

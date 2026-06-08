@@ -5,7 +5,7 @@ import {
   hasSave,
   saveGame,
   clearSave,
-} from './game-state.js';
+} from './game-state.js?v=25';
 import {
   initBattle,
   startBattle,
@@ -21,7 +21,7 @@ import {
   resumeBattle,
   setShowCounting,
   setDuelDifficulty,
-} from './battle.js';
+} from './battle.js?v=25';
 import { sounds, resumeAudio } from './sounds.js';
 import { renderPauseMap, showPauseOverlay } from './pause-menu.js';
 import { renderWorldMap } from './components/world-map-ui.js';
@@ -135,13 +135,20 @@ function startNewGame(duelMode = false, duelDifficulty = 2) {
 
 function enterDuelBattle() {
   gameState.player.duelMode = true;
+  gameState.player.duelCombo = 0;
   if (!gameState.duelOpponent) {
-    gameState.duelOpponent = { hp: DUEL_HP, maxHp: DUEL_HP, name: '피아노 소년' };
+    gameState.duelOpponent = { hp: DUEL_HP, maxHp: DUEL_HP, name: '피아노 소년', combo: 0 };
+  } else {
+    gameState.duelOpponent.combo = 0;
   }
   saveGame(gameState);
   showScreen('battle');
   syncBattleChromeForMode();
   startBattle(gameState, { forceDuel: true });
+}
+
+function syncGameStateFromBattle() {
+  gameState = getState() ?? gameState;
 }
 
 function showResult(title, message, leveledUp = false, icon = '🎉') {
@@ -193,9 +200,9 @@ bindClick('btn-continue', () => {
 
 bindClick('btn-world-back', () => showScreen('title'));
 bindClick('btn-world-start', () => startWorldBattle(selectedWorldId));
-bindClick('btn-judge-perfect', () => judge('perfect'));
-bindClick('btn-judge-good', () => judge('good'));
-bindClick('btn-judge-miss', () => judge('miss'));
+bindClick('btn-judge-perfect', () => { judge('perfect'); syncGameStateFromBattle(); });
+bindClick('btn-judge-good', () => { judge('good'); syncGameStateFromBattle(); });
+bindClick('btn-judge-miss', () => { judge('miss'); syncGameStateFromBattle(); });
 bindClick('btn-skill-burst', () => useSkill('burst'));
 bindClick('btn-skill-shield', () => useSkill('shield'));
 bindClick('btn-skill-guide', () => useSkill('guide'));

@@ -1,7 +1,7 @@
 import { getMonster, getWorld, getMonstersInWorld, getWorldCount } from './data.js';
 import { generatePattern } from './rhythm-generator.js';
 import { renderScore } from './notation.js';
-import { getComboBonus, addExp, saveGame, DUEL_HP, getDuelDifficultyLabel } from './game-state.js';
+import { getComboBonus, getDuelComboBonus, getDuelCombosFromState, addExp, saveGame, DUEL_HP, getDuelDifficultyLabel } from './game-state.js?v=25';
 import { sounds } from './sounds.js';
 import { renderRhythmCardSlots, spawnSuccessParticle, spawnComboFire, spawnBurstImpact } from './components/rhythm-card.js';
 import {
@@ -21,7 +21,7 @@ import {
   shieldEffect,
   burstEffect,
   updateSkillButtonsUI,
-} from './components/battle-ui.js';
+} from './components/battle-ui.js?v=25';
 
 /** @typedef {import('./game-state.js').GameState} GameState */
 
@@ -68,11 +68,12 @@ export function startBattle(gameState, options = {}) {
     state.monsterHp = 0;
     state.player.monsterIndex = 0;
     if (!state.duelOpponent) {
-      state.duelOpponent = { hp: DUEL_HP, maxHp: DUEL_HP, name: DUEL_OPPONENT_META.name };
+      state.duelOpponent = { hp: DUEL_HP, maxHp: DUEL_HP, name: DUEL_OPPONENT_META.name, combo: 0 };
     } else {
       state.duelOpponent.name = DUEL_OPPONENT_META.name;
+      if (state.duelOpponent.combo == null) state.duelOpponent.combo = 0;
     }
-    state.duelCombos = { A: 0, B: 0 };
+    state.player.duelCombo = 0;
     state.player.combo = 0;
     if (!state.player.maxHp) state.player.maxHp = DUEL_HP;
   } else {
@@ -145,7 +146,7 @@ function renderFullBattleUI() {
       opponentHp: state.duelOpponent?.hp ?? DUEL_HP,
       opponentMax: state.duelOpponent?.maxHp ?? DUEL_HP,
       player,
-      duelCombos: state.duelCombos ?? { A: 0, B: 0 },
+      duelCombos: getDuelCombosFromState(state),
       duelAttacker: player.duelAttacker,
     });
 
@@ -195,7 +196,7 @@ function refreshStats() {
       monsterMax: state.duelOpponent?.maxHp ?? DUEL_HP,
       player: state.player,
       duelMode: true,
-      duelCombos: state.duelCombos ?? { A: 0, B: 0 },
+      duelCombos: getDuelCombosFromState(state),
       duelAttacker: state.player.duelAttacker,
     });
     return;
@@ -290,8 +291,20 @@ function applyPlayerDamage(amount, reason) {
 /** @param {'perfect'|'good'|'miss'} judgment @param {number} combo */
 function getDuelDamage(judgment, combo) {
   const judgmentBonus = judgment === 'perfect' ? 2 : judgment === 'good' ? 1 : 0;
-  const comboBonus = getComboBonus(combo);
+  const comboBonus = getDuelComboBonus(combo);
   return DUEL_ATK + judgmentBonus + comboBonus;
+}
+
+/** @param {'A'|'B'} side @returns {number} */
+function getDuelCombo(side) {
+  if (side === 'A') return state.player.duelCombo ?? 0;
+  return state.duelOpponent?.combo ?? 0;
+}
+
+/** @param {'A'|'B'} side @param {number} value */
+function setDuelCombo(side, value) {
+  if (side === 'A') state.player.duelCombo = Math.max(0, value);
+  else if (state.duelOpponent) state.duelOpponent.combo = Math.max(0, value);
 }
 
 /** @param {'A'|'B'} winner */
@@ -303,12 +316,6 @@ function handleDuelVictory(winner) {
   onVictory({ duel: true, winner });
 }
 
-/** @param {'A'|'B'} side @returns {number} */
-function getDuelCombo(side) {
-  if (!state.duelCombos) state.duelCombos = { A: 0, B: 0 };
-  return state.duelCombos[side] ?? 0;
-}
-
 /** @param {'perfect'|'good'|'miss'} judgment */
 function judgeDuel(judgment) {
   const attacker = state.player.duelAttacker;
@@ -317,8 +324,7 @@ function judgeDuel(judgment) {
 
   if (judgment === 'miss') {
     sounds.miss();
-    if (!state.duelCombos) state.duelCombos = { A: 0, B: 0 };
-    state.duelCombos[attacker] = 0;
+    setDuelCombo(attacker, 0);
     setDuelFieldState(attacker, 'DAMAGE');
     shakeDuelFieldCharacter(attacker);
 
@@ -330,8 +336,7 @@ function judgeDuel(judgment) {
     setMessage(`${getDuelFighterName(attacker)} 실수! ${DUEL_MISS_SELF} 데미지`);
   } else {
     sounds.success();
-    if (!state.duelCombos) state.duelCombos = { A: 0, B: 0 };
-    state.duelCombos[attacker] += judgment === 'perfect' ? 2 : 1;
+    setDuelCombo(attacker, getDuelCombo(attacker) + (judgment === 'perfect' ? 2 : 1));
     const attackerCombo = getDuelCombo(attacker);
     showComboEffects(attackerCombo);
     setDuelFieldState(attacker, strumToPlayerState(strumGuide, judgment));
@@ -341,7 +346,7 @@ function judgeDuel(judgment) {
     const zone = els.particleZone ?? document.getElementById('particle-zone');
     if (zone) spawnSuccessParticle(zone, zone.clientWidth / 2, zone.clientHeight / 2);
 
-    const comboBonus = getComboBonus(attackerCombo);
+    const comboBonus = getDuelComboBonus(attackerCombo);
     const dmg = getDuelDamage(judgment, attackerCombo);
     if (attacker === 'A' && state.duelOpponent) {
       state.duelOpponent.hp = Math.max(0, state.duelOpponent.hp - dmg);
