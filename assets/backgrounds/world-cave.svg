@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" preserveAspectRatio="xMidYMax slice">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2c3e50"/>
+      <stop offset="55%" stop-color="#4a235a"/>
+      <stop offset="100%" stop-color="#5d6d7e"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="450" fill="url(#bg)"/>
+  <ellipse cx="400" cy="420" rx="320" ry="28" fill="rgba(0,0,0,0.18)"/>
+  <text x="400" y="60" text-anchor="middle" font-family="Nunito,sans-serif" font-size="28" font-weight="800" fill="rgba(255,255,255,0.35)">동굴</text>
+</svg>
