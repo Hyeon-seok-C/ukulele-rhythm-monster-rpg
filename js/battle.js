@@ -256,7 +256,7 @@ function setMessage(msg) {
   onMessage(msg);
 }
 
-function showComboEffects(combo) {
+function showComboEffects(combo = state?.player?.combo ?? 0) {
   if (combo < 3) return;
   const zone = els.particleZone ?? document.getElementById('particle-zone');
   for (let i = 0; i < 3; i++) {
@@ -287,10 +287,11 @@ function applyPlayerDamage(amount, reason) {
   return true;
 }
 
-/** @param {'perfect'|'good'|'miss'} judgment */
-function getDuelDamage(judgment) {
-  const bonus = judgment === 'perfect' ? 2 : judgment === 'good' ? 1 : 0;
-  return DUEL_ATK + bonus;
+/** @param {'perfect'|'good'|'miss'} judgment @param {number} combo */
+function getDuelDamage(judgment, combo) {
+  const judgmentBonus = judgment === 'perfect' ? 2 : judgment === 'good' ? 1 : 0;
+  const comboBonus = getComboBonus(combo);
+  return DUEL_ATK + judgmentBonus + comboBonus;
 }
 
 /** @param {'A'|'B'} winner */
@@ -331,7 +332,8 @@ function judgeDuel(judgment) {
     sounds.success();
     if (!state.duelCombos) state.duelCombos = { A: 0, B: 0 };
     state.duelCombos[attacker] += judgment === 'perfect' ? 2 : 1;
-    showComboEffects(getDuelCombo(attacker));
+    const attackerCombo = getDuelCombo(attacker);
+    showComboEffects(attackerCombo);
     setDuelFieldState(attacker, strumToPlayerState(strumGuide, judgment));
 
     renderPatternUI(0);
@@ -339,7 +341,8 @@ function judgeDuel(judgment) {
     const zone = els.particleZone ?? document.getElementById('particle-zone');
     if (zone) spawnSuccessParticle(zone, zone.clientWidth / 2, zone.clientHeight / 2);
 
-    const dmg = getDuelDamage(judgment);
+    const comboBonus = getComboBonus(attackerCombo);
+    const dmg = getDuelDamage(judgment, attackerCombo);
     if (attacker === 'A' && state.duelOpponent) {
       state.duelOpponent.hp = Math.max(0, state.duelOpponent.hp - dmg);
       shakeDuelFieldCharacter('B');
@@ -347,7 +350,8 @@ function judgeDuel(judgment) {
       state.player.hp = Math.max(0, state.player.hp - dmg);
       shakeDuelFieldCharacter('A');
     }
-    setMessage(`${getDuelFighterName(attacker)} 공격! ${dmg} 데미지!`);
+    const comboNote = comboBonus > 0 ? ` (콤보 +${comboBonus})` : '';
+    setMessage(`${getDuelFighterName(attacker)} 공격! ${dmg} 데미지!${comboNote}`);
     sounds.attack();
   }
 
