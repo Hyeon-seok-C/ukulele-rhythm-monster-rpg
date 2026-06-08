@@ -39,6 +39,25 @@ export const PLAYER_SPRITE_SHEET = {
   },
 };
 
+/** 모험가 소년 — 개별 모션 PNG */
+export const PLAYER_MOTIONS = {
+  idle: 'assets/images/player_hero.png',
+  attack: 'assets/images/player_hero_attack.png',
+  perfect: 'assets/images/player_perfect.png',
+  damage: 'assets/images/player_damage.png',
+  victory: 'assets/images/player_victory.png',
+  displayHeight: 72,
+  /** @type {Record<PlayerAnimState, 'idle'|'attack'|'perfect'|'damage'|'victory'>} */
+  stateMap: {
+    IDLE: 'idle',
+    DAMAGE: 'damage',
+    STRUM_DOWN: 'attack',
+    STRUM_UP: 'attack',
+    PERFECT: 'perfect',
+    VICTORY: 'victory',
+  },
+};
+
 /** 2인 대결 플레이어 A — 드럼 소년 */
 export const DUEL_PLAYER_META = {
   id: 'duel_drum_boy',

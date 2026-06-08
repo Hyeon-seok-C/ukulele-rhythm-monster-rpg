@@ -1,5 +1,5 @@
-import { PLAYER_BOY_META, PLAYER_SPRITE_SHEET, DUEL_OPPONENT_META } from '../player-meta.js';
-import { chromaKeySpriteSheet, chromaKeyImage, getSpriteDisplaySize } from '../player-sprite-util.js';
+import { PLAYER_BOY_META, PLAYER_MOTIONS, DUEL_OPPONENT_META } from '../player-meta.js';
+import { imageHasTransparentBackground, removeBorderBackground } from '../player-sprite-util.js';
 
 /** @type {import('../player-meta.js').PlayerAnimState} */
 let currentState = 'IDLE';
@@ -7,8 +7,58 @@ let currentState = 'IDLE';
 const statesByPrefix = {};
 /** @type {Record<string, ReturnType<typeof setTimeout>>} */
 const resetTimers = {};
-/** @type {Record<string, boolean>} */
-const useSpriteSheetByPrefix = {};
+/** @type {Record<string, string>} */
+const motionCache = {};
+
+/**
+ * @param {typeof PLAYER_MOTIONS} motions
+ * @param {import('../player-meta.js').PlayerAnimState} state
+ */
+function stateToMotionKey(motions, state) {
+  return motions.stateMap[state] ?? 'idle';
+}
+
+/**
+ * @param {string} prefix
+ * @param {import('../player-meta.js').PlayerAnimState} state
+ */
+function showPlayerMotion(prefix, state) {
+  const img = document.getElementById(`${prefix}-hero-img`);
+  if (!img) return;
+
+  const motionKey = stateToMotionKey(PLAYER_MOTIONS, state);
+  const path = PLAYER_MOTIONS[motionKey];
+  if (!path) return;
+
+  const cacheKey = path;
+  if (motionCache[cacheKey]) {
+    img.src = motionCache[cacheKey];
+    return;
+  }
+
+  const probe = new Image();
+  probe.crossOrigin = 'anonymous';
+  probe.onload = () => {
+    let src = path;
+    if (!imageHasTransparentBackground(probe)) {
+      const dataUrl = removeBorderBackground(
+        probe,
+        probe.naturalWidth,
+        probe.naturalHeight,
+        48,
+      );
+      if (dataUrl) src = dataUrl;
+    }
+    motionCache[cacheKey] = src;
+    if (document.getElementById(`${prefix}-hero-img`)) {
+      img.src = `${src}${src.startsWith('data:') ? '' : `?v=${Date.now()}`}`;
+    }
+  };
+  probe.onerror = () => {
+    img.src = path;
+  };
+  probe.src = `${path}?v=${Date.now()}`;
+}
 
 /**
  * @param {HTMLElement} container
@@ -25,51 +75,24 @@ export function initPlayerHero(container, opts = {}) {
   const prefix = opts.prefix ?? 'player';
   const flipClass = opts.flip ? 'player-hero-flip' : '';
   const label = opts.label ?? PLAYER_BOY_META.name;
-  const { frameCount } = PLAYER_SPRITE_SHEET;
-  const display = getSpriteDisplaySize(PLAYER_SPRITE_SHEET);
+  const displayH = PLAYER_MOTIONS.displayHeight ?? 72;
 
   container.innerHTML = `
     <div class="player-hero-wrap ${flipClass}">
       <div id="${prefix}-hero-stage" class="player-hero-stage player-state-idle">
-        <div
-          id="${prefix}-sprite"
-          class="player-sprite"
-          role="img"
-          aria-label="${label}"
-          style="
-            --frame-count: ${frameCount};
-            --frame-index: 0;
-            --display-w: ${display.width}px;
-            --display-h: ${display.height}px;
-          "
-        ></div>
         <img
-          id="${prefix}-sprite-fallback"
-          class="player-hero-img player-sprite-fallback hidden"
-          src="${PLAYER_BOY_META.imagePath}"
+          id="${prefix}-hero-img"
+          class="player-hero-img"
           alt="${label}"
+          draggable="false"
+          style="height:${displayH}px;width:auto;max-width:100%;object-fit:contain;"
         />
         <div id="${prefix}-state-fx" class="player-state-fx"></div>
       </div>
     </div>`;
 
   statesByPrefix[prefix] = 'IDLE';
-
-  const probe = new Image();
-  probe.crossOrigin = 'anonymous';
-  probe.onload = () => {
-    const sprite = document.getElementById(`${prefix}-sprite`);
-    const dataUrl = chromaKeySpriteSheet(probe, PLAYER_SPRITE_SHEET);
-    if (sprite && dataUrl) {
-      sprite.style.setProperty('--sprite-url', `url('${dataUrl}')`);
-      useSpriteSheetByPrefix[prefix] = true;
-      applySpriteFrame(prefix, statesByPrefix[prefix]);
-    } else {
-      fallbackToSvg(prefix);
-    }
-  };
-  probe.onerror = () => fallbackToSvg(prefix);
-  probe.src = `${PLAYER_SPRITE_SHEET.imagePath}?v=${Date.now()}`;
+  showPlayerMotion(prefix, 'IDLE');
 }
 
 /**
@@ -86,7 +109,7 @@ function initOpponentHero(container, opts) {
     <div class="player-hero-wrap opponent-hero-wrap ${flipClass}">
       <div id="${prefix}-hero-stage" class="player-hero-stage opponent-hero-stage player-state-idle">
         <img
-          id="${prefix}-sprite-fallback"
+          id="${prefix}-hero-img"
           class="player-hero-img opponent-hero-img"
           src="${DUEL_OPPONENT_META.imagePath}"
           alt="${label}"
@@ -97,36 +120,17 @@ function initOpponentHero(container, opts) {
     </div>`;
 
   statesByPrefix[prefix] = 'IDLE';
-  useSpriteSheetByPrefix[prefix] = false;
 
-  const imgEl = document.getElementById(`${prefix}-sprite-fallback`);
+  const imgEl = document.getElementById(`${prefix}-hero-img`);
   const probe = new Image();
   probe.crossOrigin = 'anonymous';
   probe.onload = () => {
-    const dataUrl = chromaKeyImage(probe, { r: 0, g: 0, b: 0 }, 60);
-    if (imgEl && dataUrl) imgEl.src = dataUrl;
+    if (!imageHasTransparentBackground(probe)) {
+      const dataUrl = removeBorderBackground(probe, probe.naturalWidth, probe.naturalHeight, 48);
+      if (imgEl && dataUrl) imgEl.src = dataUrl;
+    }
   };
   probe.src = `${DUEL_OPPONENT_META.imagePath}?v=${Date.now()}`;
-}
-
-/** @param {string} prefix */
-function fallbackToSvg(prefix) {
-  useSpriteSheetByPrefix[prefix] = false;
-  document.getElementById(`${prefix}-sprite`)?.classList.add('hidden');
-  document.getElementById(`${prefix}-sprite-fallback`)?.classList.remove('hidden');
-}
-
-/**
- * @param {string} prefix
- * @param {import('../player-meta.js').PlayerAnimState} state
- */
-function applySpriteFrame(prefix, state) {
-  const sprite = document.getElementById(`${prefix}-sprite`);
-  if (!sprite || !useSpriteSheetByPrefix[prefix]) return;
-
-  const frameIndex = PLAYER_SPRITE_SHEET.frames[state] ?? 0;
-  sprite.style.setProperty('--frame-index', String(frameIndex));
-  sprite.dataset.state = state;
 }
 
 /**
@@ -142,8 +146,9 @@ export function setPlayerState(state, opts = {}) {
   const fx = document.getElementById(`${prefix}-state-fx`);
   if (!stage) return;
 
-  stage.className = `player-hero-stage player-state-${state.toLowerCase()}`;
-  applySpriteFrame(prefix, state);
+  const extra = prefix === 'opponent' ? ' opponent-hero-stage' : '';
+  stage.className = `player-hero-stage${extra} player-state-${state.toLowerCase()}`;
+  if (prefix === 'player') showPlayerMotion(prefix, state);
 
   if (fx) {
     fx.innerHTML = '';
