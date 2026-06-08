@@ -1,6 +1,9 @@
-import { EXP_TABLE } from './data.js';
+import { EXP_TABLE, PLAYER_CHARACTER } from './data.js';
+import { DUEL_OPPONENT_META, DUEL_PLAYER_META } from './player-meta.js';
 
-const SAVE_KEY = 'ukulele-rhythm-monster-save';
+const SAVE_KEY = 'rhythm-monster-rpg-save';
+const DUEL_SAVE_KEY = 'rhythm-monster-rpg-duel-save';
+const LEGACY_SAVE_KEY = 'ukulele-rhythm-monster-save';
 
 /** @typedef {{
  *   level: number,
@@ -13,21 +16,34 @@ const SAVE_KEY = 'ukulele-rhythm-monster-save';
  *   monsterIndex: number,
  *   duelMode: boolean,
  *   duelAttacker: 'A'|'B',
+ *   duelDifficulty: number,
  *   playerName: string,
+ *   skillPoints: number,
+ *   maxSkillPoints: number,
  * }} PlayerState */
+
+/** @typedef {{ hp: number, maxHp: number, name: string }} DuelOpponent */
 
 /** @typedef {{
  *   player: PlayerState,
  *   monsterHp: number,
+ *   duelOpponent: DuelOpponent|null,
  *   lastPatternKey: string|null,
  *   inBattle: boolean,
  * }} GameState */
 
-export function createInitialPlayer(duelMode = false) {
+export const DUEL_HP = 20;
+
+/** @param {number} level 1=초급 2=중급 3=고급 */
+export function getDuelDifficultyLabel(level) {
+  return ({ 1: '초급', 2: '중급', 3: '고급' })[level] ?? '중급';
+}
+
+export function createInitialPlayer(duelMode = false, duelDifficulty = 2) {
   return {
     level: 1,
-    hp: 20,
-    maxHp: 20,
+    hp: DUEL_HP,
+    maxHp: DUEL_HP,
     atk: 3,
     exp: 0,
     combo: 0,
@@ -35,18 +51,41 @@ export function createInitialPlayer(duelMode = false) {
     monsterIndex: 0,
     duelMode,
     duelAttacker: /** @type {'A'} */ ('A'),
-    playerName: duelMode ? 'A 학생' : '플레이어',
+    duelDifficulty: duelMode ? Math.min(3, Math.max(1, duelDifficulty)) : 2,
+    playerName: duelMode ? DUEL_PLAYER_META.name : PLAYER_CHARACTER.name,
+    skillPoints: 3,
+    maxSkillPoints: 3,
   };
 }
 
 /** @returns {GameState} */
-export function createNewGame(duelMode = false) {
+export function createNewGame(duelMode = false, duelDifficulty = 2) {
   return {
-    player: createInitialPlayer(duelMode),
+    player: createInitialPlayer(duelMode, duelDifficulty),
     monsterHp: 0,
+    duelOpponent: duelMode
+      ? { hp: DUEL_HP, maxHp: DUEL_HP, name: DUEL_OPPONENT_META.name }
+      : null,
     lastPatternKey: null,
     inBattle: false,
   };
+}
+
+/** @param {GameState} data */
+function normalizeSave(data) {
+  if (data.player.duelMode == null) data.player.duelMode = false;
+  if (data.player.duelDifficulty == null) data.player.duelDifficulty = 2;
+  if (data.player.maxSkillPoints == null) data.player.maxSkillPoints = 3;
+  if (data.player.skillPoints == null) data.player.skillPoints = data.player.maxSkillPoints;
+  if (data.player.duelMode && data.player.playerName === 'A 학생') {
+    data.player.playerName = DUEL_PLAYER_META.name;
+  }
+  if (data.player.duelMode && !data.duelOpponent) {
+    data.duelOpponent = { hp: DUEL_HP, maxHp: DUEL_HP, name: DUEL_OPPONENT_META.name };
+  } else if (data.duelOpponent?.name === 'B 학생') {
+    data.duelOpponent.name = DUEL_OPPONENT_META.name;
+  }
+  return data;
 }
 
 export function getExpForLevel(level) {
@@ -88,27 +127,53 @@ export function addExp(player, amount) {
 
 export function saveGame(state) {
   try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+    const key = state.player.duelMode ? DUEL_SAVE_KEY : SAVE_KEY;
+    localStorage.setItem(key, JSON.stringify(state));
+    if (state.player.duelMode) {
+      localStorage.removeItem(SAVE_KEY);
+      localStorage.removeItem(LEGACY_SAVE_KEY);
+    } else {
+      localStorage.removeItem(DUEL_SAVE_KEY);
+    }
     return true;
   } catch {
     return false;
   }
 }
 
-export function loadGame() {
+/** @param {'solo'|'duel'} [mode] */
+export function loadGame(mode = 'solo') {
   try {
-    const raw = localStorage.getItem(SAVE_KEY);
+    let raw = null;
+    if (mode === 'duel') {
+      raw = localStorage.getItem(DUEL_SAVE_KEY);
+    } else {
+      raw = localStorage.getItem(SAVE_KEY) || localStorage.getItem(LEGACY_SAVE_KEY);
+    }
     if (!raw) return null;
-    return /** @type {GameState} */ (JSON.parse(raw));
+    const data = normalizeSave(/** @type {GameState} */ (JSON.parse(raw)));
+    if (mode === 'solo' && data.player.duelMode) return null;
+    if (mode === 'duel' && !data.player.duelMode) return null;
+    return data;
   } catch {
     return null;
   }
 }
 
+/** 싱글 RPG 이어하기용 — 2인 대결 저장은 제외 */
 export function hasSave() {
-  return !!localStorage.getItem(SAVE_KEY);
+  const raw = localStorage.getItem(SAVE_KEY) || localStorage.getItem(LEGACY_SAVE_KEY);
+  if (!raw) return false;
+  try {
+    const data = normalizeSave(JSON.parse(raw));
+    return !data.player.duelMode;
+  } catch {
+    return false;
+  }
 }
 
 export function clearSave() {
   localStorage.removeItem(SAVE_KEY);
+  localStorage.removeItem(DUEL_SAVE_KEY);
+  localStorage.removeItem(LEGACY_SAVE_KEY);
 }

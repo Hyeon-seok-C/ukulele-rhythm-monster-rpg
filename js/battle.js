@@ -1,8 +1,27 @@
-import { getMonster, getWorld } from './data.js';
-import { generatePattern, getStrumHints } from './rhythm-generator.js';
+import { getMonster, getWorld, getMonstersInWorld, getWorldCount } from './data.js';
+import { generatePattern } from './rhythm-generator.js';
 import { renderScore } from './notation.js';
-import { getComboBonus, addExp, saveGame } from './game-state.js';
+import { getComboBonus, addExp, saveGame, DUEL_HP, getDuelDifficultyLabel } from './game-state.js';
 import { sounds } from './sounds.js';
+import { renderRhythmCardSlots, spawnSuccessParticle, spawnComboFire, spawnBurstImpact } from './components/rhythm-card.js';
+import {
+  setupDuelFieldCharacters,
+  setDuelFieldState,
+  setDuelVictoryPose,
+  highlightDuelTurn,
+  shakeDuelFieldCharacter,
+} from './components/duel-field.js';
+import { initPlayerHero, setPlayerState, setVictoryPose } from './components/player-hero.js';
+import { strumToPlayerState, DUEL_OPPONENT_META, DUEL_PLAYER_META, getDuelFighterName } from './player-meta.js';
+import {
+  renderBattleScene,
+  renderDuelBattleScene,
+  updateBattleStatsUI,
+  shakeMonster,
+  shieldEffect,
+  burstEffect,
+  updateSkillButtonsUI,
+} from './components/battle-ui.js';
 
 /** @typedef {import('./game-state.js').GameState} GameState */
 
@@ -13,12 +32,19 @@ let state;
 let currentPattern = null;
 
 let answerHidden = false;
+let showCounting = false;
+let isPaused = false;
 let scoreZoom = 1;
+let shieldActive = false;
+let guideActive = false;
 let onVictory = () => {};
 let onDefeat = () => {};
 let onMessage = () => {};
 
 const els = {};
+
+const DUEL_ATK = 3;
+const DUEL_MISS_SELF = 2;
 
 export function initBattle(ui, callbacks) {
   Object.assign(els, ui);
@@ -27,20 +53,44 @@ export function initBattle(ui, callbacks) {
   onMessage = callbacks.onMessage ?? (() => {});
 }
 
-/** @param {GameState} gameState */
-export function startBattle(gameState) {
+/** @param {GameState} gameState @param {{ forceDuel?: boolean }} [options] */
+export function startBattle(gameState, options = {}) {
   state = gameState;
+  if (options.forceDuel) state.player.duelMode = true;
   state.inBattle = true;
-  const monster = getCurrentMonster();
-  state.monsterHp = monster.hp;
+  shieldActive = false;
+  guideActive = false;
 
-  if (monster.isBoss) {
-    sounds.boss();
-    els.battleMain?.classList.add('screen-shake');
-    setTimeout(() => els.battleMain?.classList.remove('screen-shake'), 500);
+  if (state.player.duelMode) {
+    state.player.duelMode = true;
+    state.player.playerName = DUEL_PLAYER_META.name;
+    state.player.skillPoints = 0;
+    state.monsterHp = 0;
+    state.player.monsterIndex = 0;
+    if (!state.duelOpponent) {
+      state.duelOpponent = { hp: DUEL_HP, maxHp: DUEL_HP, name: DUEL_OPPONENT_META.name };
+    } else {
+      state.duelOpponent.name = DUEL_OPPONENT_META.name;
+    }
+    if (!state.player.maxHp) state.player.maxHp = DUEL_HP;
+  } else {
+    const monster = getCurrentMonster();
+    state.monsterHp = monster.hp;
+    state.player.skillPoints = state.player.maxSkillPoints ?? 3;
   }
 
-  updateBattleUI();
+  applyBattleTheme();
+
+  if (!state.player.duelMode) {
+    const monster = getCurrentMonster();
+    if (monster.isBoss || monster.isFinalBoss) {
+      sounds.boss();
+      els.battleMain?.classList.add('screen-shake');
+      setTimeout(() => els.battleMain?.classList.remove('screen-shake'), 500);
+    }
+  }
+
+  renderFullBattleUI();
   newPattern();
   saveGame(state);
 }
@@ -50,98 +100,161 @@ function getCurrentMonster() {
 }
 
 function getDifficulty() {
+  if (state.player.duelMode) {
+    return Math.min(3, Math.max(1, state.player.duelDifficulty ?? 2));
+  }
   const world = getWorld(state.player.worldId);
   const monster = getCurrentMonster();
   if (monster.bossRule === 'max_difficulty') return 5;
   return world.difficulty;
 }
 
-export function newPattern() {
+function applyBattleTheme() {
+  els.battleMain.className = 'battle-main';
+  if (state.player.duelMode) {
+    els.battleMain.classList.add('theme-duel');
+    return;
+  }
   const monster = getCurrentMonster();
+  const world = getWorld(state.player.worldId);
+  if (monster.isFinalBoss) els.battleMain.classList.add('theme-final-boss');
+  else if (monster.isBoss) els.battleMain.classList.add('theme-boss');
+  else els.battleMain.classList.add(world.theme);
+}
+
+function updateDuelIndicator() {
+  if (!state.player.duelMode || !els.duelRole) return;
+  const turn = state.player.duelAttacker;
+  els.duelRole.textContent = `${getDuelFighterName(turn)} 차례`;
+  const diffTag = document.getElementById('duel-difficulty-tag');
+  if (diffTag) {
+    const label = getDuelDifficultyLabel(state.player.duelDifficulty ?? 2);
+    diffTag.textContent = `2인 대결 · ${label}`;
+  }
+  highlightDuelTurn(turn);
+}
+
+function renderFullBattleUI() {
+  const { player } = state;
+  const isDuel = Boolean(player.duelMode);
+
+  if (isDuel) {
+    renderDuelBattleScene(els.battleScene, els.battleHud, {
+      opponentHp: state.duelOpponent?.hp ?? DUEL_HP,
+      opponentMax: state.duelOpponent?.maxHp ?? DUEL_HP,
+      player,
+    });
+
+    setupDuelFieldCharacters();
+    setDuelFieldState('A', 'IDLE', { autoResetMs: 0 });
+    setDuelFieldState('B', 'IDLE', { autoResetMs: 0 });
+
+    els.duelIndicator?.classList.remove('hidden');
+    updateDuelIndicator();
+
+    document.querySelector('.skill-btns')?.classList.add('hidden');
+    document.getElementById('skill-points-label')?.closest('p')?.classList.add('hidden');
+    document.getElementById('teacher-duel-diff')?.classList.remove('hidden');
+    syncDuelDifficultyUI(player.duelDifficulty ?? 2);
+  } else {
+    const monster = getCurrentMonster();
+    renderBattleScene(els.battleScene, els.battleHud, {
+      worldId: player.worldId,
+      monster,
+      monsterHp: state.monsterHp,
+      player: {
+        ...player,
+        name: '모험가 소년',
+      },
+    });
+
+    initPlayerHero(document.getElementById('player-hero-mount'));
+    setPlayerState('IDLE');
+
+    els.duelIndicator?.classList.add('hidden');
+    document.querySelector('.skill-btns')?.classList.remove('hidden');
+    document.getElementById('skill-points-label')?.closest('p')?.classList.remove('hidden');
+    document.getElementById('teacher-duel-diff')?.classList.add('hidden');
+  }
+
+  els.rhythmCardArea = document.getElementById('rhythm-card-area');
+  els.messageBox = document.getElementById('message-box');
+  els.particleZone = document.getElementById('particle-zone');
+
+  updateSkillButtonsUI(state.player.skillPoints, state.player.maxSkillPoints);
+}
+
+function refreshStats() {
+  if (state.player.duelMode) {
+    updateBattleStatsUI(els.battleHud, {
+      monsterHp: state.duelOpponent?.hp ?? 0,
+      monsterMax: state.duelOpponent?.maxHp ?? DUEL_HP,
+      player: state.player,
+    });
+    return;
+  }
+
+  const monster = getCurrentMonster();
+  updateBattleStatsUI(els.battleHud, {
+    monsterHp: state.monsterHp,
+    monsterMax: monster.hp,
+    player: state.player,
+  });
+}
+
+function renderPatternUI(successMeasure = undefined) {
+  if (!currentPattern || !els.rhythmCardArea) return;
+  renderRhythmCardSlots(els.rhythmCardArea, currentPattern.measureBeats, {
+    hideStrum: answerHidden,
+    showCounting,
+    successMeasure,
+  });
+  if (els.vexflowOutput) {
+    renderScore(els.vexflowOutput, currentPattern.events, currentPattern.measureBeats);
+  }
+  applyScoreZoom();
+}
+
+export function newPattern(options = {}) {
+  if (isPaused && !options.force) return;
+  guideActive = false;
   const difficulty = getDifficulty();
+  const bossRule = state.player.duelMode ? null : (getCurrentMonster().bossRule ?? null);
   currentPattern = generatePattern(
     difficulty,
-    monster.bossRule ?? null,
+    bossRule,
     state.lastPatternKey
   );
   state.lastPatternKey = currentPattern.key;
 
-  renderScore(els.vexflowOutput, currentPattern.events);
-  renderStrumHints(currentPattern.events);
-  applyScoreZoom();
+  renderPatternUI();
 
-  setMessage(`${monster.name}의 리듬! (${currentPattern.length}박) — 연주 후 교사가 판정하세요.`);
+  const duelLevelNames = { 1: '초급', 2: '중급', 3: '고급' };
+  const lvl = state.player.duelMode
+    ? (duelLevelNames[state.player.duelDifficulty ?? currentPattern.educationLevel] ?? '중급')
+    : ({ 1: '초급', 2: '중급', 3: '상급', 4: '최상급', 5: '왕국급' })[currentPattern.educationLevel] ?? '초급';
+
+  if (state.player.duelMode) {
+    const turn = state.player.duelAttacker;
+    setMessage(`${getDuelFighterName(turn)} 차례! ${currentPattern.measureCount}마디 · 4/4 · ${lvl}`);
+  } else {
+    const monster = getCurrentMonster();
+    setMessage(`${monster.name}의 리듬! ${currentPattern.measureCount}마디 · 4/4 · ${lvl}`);
+  }
   saveGame(state);
 }
 
-function renderStrumHints(events) {
-  const hints = getStrumHints(events);
-  els.strumHints.innerHTML = hints
-    .map(
-      (h, i) =>
-        `<div class="strum-item ${h.isRest ? 'rest' : ''}"><span>${h.strum}</span></div>`
-    )
-    .join('');
-
-  if (answerHidden) {
-    els.strumContainer.classList.add('strum-hidden');
-  } else {
-    els.strumContainer.classList.remove('strum-hidden');
-  }
-}
-
 function setMessage(msg) {
-  els.messageBox.textContent = msg;
+  if (els.messageBox) els.messageBox.textContent = msg;
   onMessage(msg);
 }
 
-function updateBattleUI() {
-  const { player } = state;
-  const monster = getCurrentMonster();
-  const world = getWorld(player.worldId);
-
-  els.playerHpFill.style.width = `${(player.hp / player.maxHp) * 100}%`;
-  els.playerHpText.textContent = `${player.hp}/${player.maxHp}`;
-  els.playerLevel.textContent = `Lv.${player.level}`;
-  els.playerExp.textContent = String(player.exp);
-  els.comboDisplay.textContent = `콤보 ${player.combo}`;
-
-  els.monsterHpFill.style.width = `${(state.monsterHp / monster.hp) * 100}%`;
-  els.monsterHpText.textContent = `${state.monsterHp}/${monster.hp}`;
-  els.monsterSprite.textContent = monster.emoji;
-  els.monsterName.textContent = monster.name;
-  els.worldLabel.textContent = `월드 ${world.id} · ${world.name}`;
-
-  els.battleMain.className = 'battle-main';
-  els.battleMain.classList.add(world.theme);
-  if (monster.isBoss) {
-    els.battleMain.classList.remove('theme-beginner', 'theme-intermediate', 'theme-advanced');
-    els.battleMain.classList.add('theme-boss');
-    els.bossBadge.classList.remove('hidden');
-  } else {
-    els.bossBadge.classList.add('hidden');
-  }
-
-  if (player.duelMode) {
-    els.duelIndicator.classList.remove('hidden');
-    els.duelRole.textContent =
-      player.duelAttacker === 'A' ? 'A 학생 공격 차례' : 'B 학생 방어 차례';
-    els.playerName.textContent = player.duelAttacker === 'A' ? 'A 학생' : 'B 학생';
-  } else {
-    els.duelIndicator.classList.add('hidden');
-    els.playerName.textContent = '플레이어';
-  }
-}
-
-function showComboFlame() {
+function showComboEffects() {
   if (state.player.combo < 3) return;
-  const flame = document.createElement('div');
-  flame.className = 'combo-flame';
-  flame.textContent = '🔥'.repeat(Math.min(state.player.combo, 5));
-  flame.style.left = `${40 + Math.random() * 40}%`;
-  flame.style.top = '50%';
-  document.body.appendChild(flame);
-  setTimeout(() => flame.remove(), 800);
+  const zone = els.particleZone ?? document.getElementById('particle-zone');
+  for (let i = 0; i < 3; i++) {
+    setTimeout(() => spawnComboFire(zone), i * 120);
+  }
 }
 
 function showLightPillar() {
@@ -151,55 +264,139 @@ function showLightPillar() {
   setTimeout(() => pillar.remove(), 1500);
 }
 
-/**
- * @param {'perfect'|'good'|'miss'} judgment
- */
-export function judge(judgment) {
-  if (!state?.inBattle || !currentPattern) return;
+function applyPlayerDamage(amount, reason) {
+  if (guideActive) {
+    setMessage('마스터 가이드! 선생님이 정답을 알려줘서 피해가 없습니다!');
+    return false;
+  }
+  if (shieldActive) {
+    shieldActive = false;
+    shieldEffect(els.battleMain);
+    setMessage('리듬 쉴드! 공격을 막았습니다!');
+    return false;
+  }
+  state.player.hp = Math.max(0, state.player.hp - amount);
+  if (reason) setMessage(reason);
+  return true;
+}
 
-  const monster = getCurrentMonster();
-  const isAttackTurn = !state.player.duelMode || state.player.duelAttacker === 'A';
+/** @param {'perfect'|'good'|'miss'} judgment */
+function getDuelDamage(judgment) {
+  const bonus = judgment === 'perfect' ? 2 : judgment === 'good' ? 1 : 0;
+  return DUEL_ATK + bonus;
+}
+
+/** @param {'A'|'B'} winner */
+function handleDuelVictory(winner) {
+  state.inBattle = false;
+  sounds.victory();
+  setDuelVictoryPose(winner);
+  saveGame(state);
+  onVictory({ duel: true, winner });
+}
+
+/** @param {'perfect'|'good'|'miss'} judgment */
+function judgeDuel(judgment) {
+  const attacker = state.player.duelAttacker;
+  const firstEvent = currentPattern.events[0];
+  const strumGuide = firstEvent?.strum ?? '↓';
 
   if (judgment === 'miss') {
     sounds.miss();
     state.player.combo = 0;
+    setDuelFieldState(attacker, 'DAMAGE');
+    shakeDuelFieldCharacter(attacker);
 
-    if (isAttackTurn) {
-      const dmg = monster.atk;
-      state.player.hp = Math.max(0, state.player.hp - dmg);
-      setMessage(`${monster.name}의 반격! ${dmg} 데미지!`);
-      els.monsterSprite.classList.add('shake');
-      setTimeout(() => els.monsterSprite.classList.remove('shake'), 400);
-    } else {
-      setMessage('방어 실패! A 학생이 데미지를 받습니다!');
-      const dmg = monster.atk;
-      state.player.hp = Math.max(0, state.player.hp - dmg);
-      els.battleMain.classList.add('shield-effect');
-      setTimeout(() => els.battleMain.classList.remove('shield-effect'), 500);
+    if (attacker === 'A') {
+      state.player.hp = Math.max(0, state.player.hp - DUEL_MISS_SELF);
+    } else if (state.duelOpponent) {
+      state.duelOpponent.hp = Math.max(0, state.duelOpponent.hp - DUEL_MISS_SELF);
     }
+    setMessage(`${getDuelFighterName(attacker)} 실수! ${DUEL_MISS_SELF} 데미지`);
   } else {
     sounds.success();
     state.player.combo += judgment === 'perfect' ? 2 : 1;
-    showComboFlame();
+    showComboEffects();
+    setDuelFieldState(attacker, strumToPlayerState(strumGuide, judgment));
 
-    if (isAttackTurn) {
-      const bonus = getComboBonus(state.player.combo);
-      const baseDmg = state.player.atk + bonus;
-      const dmg = judgment === 'perfect' ? baseDmg + 1 : baseDmg;
-      state.monsterHp = Math.max(0, state.monsterHp - dmg);
-      setMessage(`공격 성공! ${dmg} 데미지! (콤보 보너스 +${bonus})`);
-      els.monsterSprite.classList.add('shake');
-      setTimeout(() => els.monsterSprite.classList.remove('shake'), 400);
-      sounds.attack();
+    renderPatternUI(0);
+
+    const zone = els.particleZone ?? document.getElementById('particle-zone');
+    if (zone) spawnSuccessParticle(zone, zone.clientWidth / 2, zone.clientHeight / 2);
+
+    const dmg = getDuelDamage(judgment);
+    if (attacker === 'A' && state.duelOpponent) {
+      state.duelOpponent.hp = Math.max(0, state.duelOpponent.hp - dmg);
+      shakeDuelFieldCharacter('B');
     } else {
-      setMessage('방어 성공! A 학생을 보호했습니다!');
-      els.battleMain.classList.add('shield-effect');
-      setTimeout(() => els.battleMain.classList.remove('shield-effect'), 500);
+      state.player.hp = Math.max(0, state.player.hp - dmg);
+      shakeDuelFieldCharacter('A');
     }
+    setMessage(`${getDuelFighterName(attacker)} 공격! ${dmg} 데미지!`);
+    sounds.attack();
   }
 
-  updateBattleUI();
+  refreshStats();
   saveGame(state);
+
+  if (state.duelOpponent && state.duelOpponent.hp <= 0) {
+    handleDuelVictory('A');
+    return;
+  }
+  if (state.player.hp <= 0) {
+    handleDuelVictory('B');
+    return;
+  }
+
+  state.player.duelAttacker = attacker === 'A' ? 'B' : 'A';
+  updateDuelIndicator();
+  setTimeout(() => newPattern(), 900);
+}
+
+/**
+ * @param {'perfect'|'good'|'miss'} judgment
+ */
+export function judge(judgment) {
+  if (!state?.inBattle || !currentPattern || isPaused) return;
+
+  if (state.player.duelMode) {
+    judgeDuel(judgment);
+    return;
+  }
+
+  const monster = getCurrentMonster();
+  const firstEvent = currentPattern.events[0];
+  const strumGuide = firstEvent?.strum ?? '↓';
+
+  if (judgment === 'miss') {
+    sounds.miss();
+    state.player.combo = 0;
+    setPlayerState('DAMAGE');
+
+    applyPlayerDamage(monster.atk, `${monster.name}의 반격! ${monster.atk} 데미지!`);
+    shakeMonster(document.getElementById('monster-field-sprite'));
+  } else {
+    sounds.success();
+    state.player.combo += judgment === 'perfect' ? 2 : 1;
+    showComboEffects();
+    setPlayerState(strumToPlayerState(strumGuide, judgment));
+
+    renderPatternUI(0);
+
+    const zone = els.particleZone ?? document.getElementById('particle-zone');
+    if (zone) spawnSuccessParticle(zone, zone.clientWidth / 2, zone.clientHeight / 2);
+
+    const bonus = getComboBonus(state.player.combo);
+    const dmg = (judgment === 'perfect' ? state.player.atk + bonus + 1 : state.player.atk + bonus);
+    state.monsterHp = Math.max(0, state.monsterHp - dmg);
+    setMessage(`공격 성공! ${dmg} 데미지!`);
+    shakeMonster(document.getElementById('monster-field-sprite'));
+    sounds.attack();
+  }
+
+  refreshStats();
+  saveGame(state);
+  guideActive = false;
 
   if (state.player.hp <= 0) {
     state.inBattle = false;
@@ -214,39 +411,67 @@ export function judge(judgment) {
     return;
   }
 
-  if (state.player.duelMode) {
-    state.player.duelAttacker = state.player.duelAttacker === 'A' ? 'B' : 'A';
-    updateBattleUI();
-  }
-
-  setTimeout(() => newPattern(), 800);
+  setTimeout(() => newPattern(), 900);
 }
 
-/** @param {'burst'|'tempo'|'perfect'} skill */
+/** @param {'burst'|'shield'|'guide'} skill */
 export function useSkill(skill) {
-  if (!state?.inBattle) return;
+  if (!state?.inBattle || isPaused) return;
+  if (state.player.duelMode) {
+    setMessage('2인 대결에서는 특수기를 사용할 수 없습니다.');
+    return;
+  }
+  if (state.player.skillPoints <= 0) {
+    setMessage('스킬 포인트가 부족합니다!');
+    return;
+  }
 
-  const damages = { burst: 10, tempo: 15, perfect: 20 };
-  const names = { burst: '리듬 버스트', tempo: '템포 브레이크', perfect: '퍼펙트 스트럼' };
-  const dmg = damages[skill];
+  state.player.skillPoints -= 1;
+  updateSkillButtonsUI(state.player.skillPoints, state.player.maxSkillPoints);
 
-  sounds.skill();
-  state.monsterHp = Math.max(0, state.monsterHp - dmg);
-  setMessage(`${names[skill]}! ${dmg} 데미지!`);
-  els.monsterSprite.classList.add('shake');
-  setTimeout(() => els.monsterSprite.classList.remove('shake'), 400);
-  updateBattleUI();
+  if (skill === 'burst') {
+    const monster = getCurrentMonster();
+    const base = Math.max(2, Math.ceil(monster.hp * 0.06));
+    const comboBonus = Math.min(2, Math.floor(state.player.combo / 4));
+    const dmg = Math.min(base + comboBonus, Math.ceil(monster.hp * 0.12));
+    sounds.burst();
+    setPlayerState('STRUM_DOWN', { autoResetMs: 600 });
+    state.monsterHp = Math.max(0, state.monsterHp - dmg);
+    setMessage(`리듬 버스트! ${dmg} 데미지!`);
+    burstEffect(els.battleMain);
+    const zone = els.particleZone ?? document.getElementById('particle-zone');
+    spawnBurstImpact(zone);
+    els.battleMain?.classList.add('screen-shake');
+    setTimeout(() => els.battleMain?.classList.remove('screen-shake'), 500);
+    shakeMonster(document.getElementById('monster-field-sprite'));
+    showLightPillar();
+    sounds.attack();
+  } else if (skill === 'shield') {
+    shieldActive = true;
+    sounds.shield();
+    setPlayerState('IDLE');
+    shieldEffect(els.battleMain);
+    setMessage('리듬 쉴드! 다음 피해 1회를 막습니다!');
+  } else if (skill === 'guide') {
+    guideActive = true;
+    answerHidden = false;
+    renderPatternUI();
+    sounds.guide();
+    setPlayerState('PERFECT', { autoResetMs: 800 });
+    setMessage('마스터 가이드! 스트럼 정답을 확인하세요. (피해 없음)');
+  }
+
+  refreshStats();
   saveGame(state);
 
-  if (state.monsterHp <= 0) {
-    handleVictory();
-  }
+  if (skill === 'burst' && state.monsterHp <= 0) handleVictory();
 }
 
 function handleVictory() {
   state.inBattle = false;
   const monster = getCurrentMonster();
   sounds.victory();
+  setVictoryPose();
 
   const { leveledUp } = addExp(state.player, monster.exp);
   if (leveledUp) {
@@ -265,7 +490,25 @@ export function fleeBattle() {
 
 export function setAnswerHidden(hidden) {
   answerHidden = hidden;
-  if (currentPattern) renderStrumHints(currentPattern.events);
+  renderPatternUI();
+}
+
+export function setShowCounting(show) {
+  showCounting = show;
+  renderPatternUI();
+}
+
+export function pauseBattle() {
+  isPaused = true;
+  saveGame(state);
+}
+
+export function resumeBattle() {
+  isPaused = false;
+}
+
+export function isBattlePaused() {
+  return isPaused;
 }
 
 export function setScoreZoom(zoom) {
@@ -273,19 +516,40 @@ export function setScoreZoom(zoom) {
   applyScoreZoom();
 }
 
+/** @param {number} level 1=초급 2=중급 3=고급 */
+export function setDuelDifficulty(level, options = {}) {
+  if (!state?.player?.duelMode) return;
+  const next = Math.min(3, Math.max(1, level));
+  if (state.player.duelDifficulty === next && options.regenerate !== true) return;
+
+  state.player.duelDifficulty = next;
+  saveGame(state);
+  updateDuelIndicator();
+  syncDuelDifficultyUI(next);
+
+  if (options.regenerate !== false) {
+    newPattern({ force: true });
+  }
+}
+
+/** @param {number} level */
+export function syncDuelDifficultyUI(level) {
+  document.querySelectorAll('[data-duel-diff]').forEach((btn) => {
+    const n = Number(btn.getAttribute('data-duel-diff'));
+    btn.classList.toggle('active', n === level);
+  });
+}
+
 function applyScoreZoom() {
   if (els.scoreContainer) {
     els.scoreContainer.style.transform = `scale(${scoreZoom})`;
-    els.scoreContainer.style.marginBottom = scoreZoom > 1 ? `${(scoreZoom - 1) * 80}px` : '0';
+    els.scoreContainer.style.transformOrigin = 'top left';
   }
 }
 
 export function toggleFullscreen() {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen?.();
-  } else {
-    document.exitFullscreen?.();
-  }
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+  else document.exitFullscreen?.();
 }
 
 export function getState() {
@@ -294,11 +558,11 @@ export function getState() {
 
 export function advanceAfterVictory() {
   state.player.monsterIndex++;
-  const monstersInWorld = 6;
+  const monstersInWorld = getMonstersInWorld(state.player.worldId);
 
   if (state.player.monsterIndex >= monstersInWorld) {
     state.player.monsterIndex = 0;
-    if (state.player.worldId < 5) {
+    if (state.player.worldId < getWorldCount()) {
       state.player.worldId++;
       saveGame(state);
       return { nextWorld: true, cleared: false };

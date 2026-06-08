@@ -13,16 +13,27 @@ import {
   useSkill,
   fleeBattle,
   setAnswerHidden,
-  setScoreZoom,
   toggleFullscreen,
   newPattern,
   advanceAfterVictory,
   getState,
+  pauseBattle,
+  resumeBattle,
+  setShowCounting,
+  setDuelDifficulty,
 } from './battle.js';
 import { sounds, resumeAudio } from './sounds.js';
+import { renderPauseMap, showPauseOverlay } from './pause-menu.js';
+import { renderWorldMap } from './components/world-map-ui.js';
+import { renderBestiaryGrid } from './components/bestiary-ui.js';
+import { initTitleHero } from './components/title-hero.js';
+import { ensureSiteAccess } from './site-gate.js';
+import { getDuelFighterName } from './player-meta.js';
+import { DUEL_HP } from './game-state.js';
 
 /** @type {import('./game-state.js').GameState} */
 let gameState = createNewGame();
+let selectedWorldId = 1;
 
 const screens = {
   title: document.getElementById('screen-title'),
@@ -32,23 +43,10 @@ const screens = {
 };
 
 const battleEls = {
-  battleMain: document.querySelector('.battle-main'),
-  playerHpFill: document.getElementById('player-hp-fill'),
-  playerHpText: document.getElementById('player-hp-text'),
-  playerLevel: document.getElementById('player-level'),
-  playerExp: document.getElementById('player-exp'),
-  comboDisplay: document.getElementById('combo-display'),
-  playerName: document.getElementById('player-name'),
-  monsterHpFill: document.getElementById('monster-hp-fill'),
-  monsterHpText: document.getElementById('monster-hp-text'),
-  monsterSprite: document.getElementById('monster-sprite'),
-  monsterName: document.getElementById('monster-name'),
-  worldLabel: document.getElementById('world-label'),
-  bossBadge: document.getElementById('boss-badge'),
-  messageBox: document.getElementById('message-box'),
+  battleMain: document.getElementById('battle-main'),
+  battleScene: document.getElementById('battle-scene'),
+  battleHud: document.getElementById('battle-hud'),
   vexflowOutput: document.getElementById('vexflow-output'),
-  strumHints: document.getElementById('strum-hints'),
-  strumContainer: document.getElementById('strum-container'),
   scoreContainer: document.getElementById('score-container'),
   duelIndicator: document.getElementById('duel-indicator'),
   duelRole: document.getElementById('duel-role'),
@@ -57,6 +55,7 @@ const battleEls = {
 function showScreen(name) {
   Object.values(screens).forEach((s) => s?.classList.remove('active'));
   screens[name]?.classList.add('active');
+  if (name === 'title') showDuelSetup(false);
 }
 
 function bindClick(id, fn) {
@@ -67,76 +66,123 @@ function bindClick(id, fn) {
   });
 }
 
-function renderWorldList() {
-  const list = document.getElementById('world-list');
-  if (!list) return;
-  list.innerHTML = WORLDS.map(
-    (w) => `
-    <div class="world-card w${w.id}" data-world="${w.id}">
-      <h3>월드 ${w.id}</h3>
-      <p>${w.name}</p>
-      <p style="margin-top:8px;font-size:10px;">난이도 ${w.difficulty}</p>
-    </div>`
-  ).join('');
+function renderWorldScreen() {
+  const root = document.getElementById('world-map-root');
+  const startBtn = document.getElementById('btn-world-start');
+  if (!root) return;
 
-  list.querySelectorAll('.world-card').forEach((card) => {
-    card.addEventListener('click', () => {
-      resumeAudio();
-      sounds.click();
-      const worldId = Number(card.getAttribute('data-world'));
-      gameState.player.worldId = worldId;
-      gameState.player.monsterIndex = 0;
-      saveGame(gameState);
-      enterBattle();
-    });
+  selectedWorldId = gameState.player.worldId || 1;
+
+  renderWorldMap(root, {
+    currentWorldId: selectedWorldId,
+    maxUnlockedWorldId: 5,
+    mode: 'select',
+    showDetail: true,
+    onSelectWorld: (worldId) => {
+      selectedWorldId = worldId;
+      startBtn?.classList.remove('hidden');
+    },
   });
+
+  startBtn?.classList.toggle('hidden', !selectedWorldId);
+  renderBestiaryGrid(document.getElementById('bestiary-root'));
 }
 
 function enterBattle() {
   showScreen('battle');
-  gameState = getState() ?? gameState;
+  syncBattleChromeForMode();
   startBattle(gameState);
 }
 
-function startNewGame(duelMode = false) {
-  gameState = createNewGame(duelMode);
+function syncBattleChromeForMode() {
+  const duel = gameState.player.duelMode;
+  document.getElementById('pause-tab-map')?.classList.toggle('hidden', duel);
+  const fleeBtn = document.getElementById('btn-flee');
+  if (fleeBtn) fleeBtn.textContent = duel ? '🚪 나가기' : '🏃 도망';
+}
+
+function startWorldBattle(worldId) {
+  gameState.player.worldId = worldId;
+  gameState.player.monsterIndex = 0;
   saveGame(gameState);
-  if (duelMode) {
-    enterBattle();
-  } else {
+  enterBattle();
+}
+
+function showDuelSetup(show) {
+  document.getElementById('title-buttons')?.classList.toggle('hidden', show);
+  document.getElementById('duel-setup')?.classList.toggle('hidden', !show);
+}
+
+function startDuelWithDifficulty(difficulty) {
+  clearSave();
+  gameState = createNewGame(true, difficulty);
+  saveGame(gameState);
+  showDuelSetup(false);
+  enterDuelBattle();
+}
+
+function startNewGame(duelMode = false, duelDifficulty = 2) {
+  clearSave();
+  gameState = createNewGame(duelMode, duelDifficulty);
+  saveGame(gameState);
+  if (duelMode) enterDuelBattle();
+  else {
     showScreen('world');
-    renderWorldList();
+    renderWorldScreen();
   }
 }
 
-function showResult(title, message, leveledUp = false) {
+function enterDuelBattle() {
+  gameState.player.duelMode = true;
+  if (!gameState.duelOpponent) {
+    gameState.duelOpponent = { hp: DUEL_HP, maxHp: DUEL_HP, name: '피아노 소년' };
+  }
+  saveGame(gameState);
+  showScreen('battle');
+  syncBattleChromeForMode();
+  startBattle(gameState, { forceDuel: true });
+}
+
+function showResult(title, message, leveledUp = false, icon = '🎉') {
   showScreen('result');
   document.getElementById('result-title').textContent = title;
   document.getElementById('result-message').textContent = message;
-  const lvlFx = document.getElementById('levelup-effect');
-  if (leveledUp) {
-    lvlFx.classList.remove('hidden');
-  } else {
-    lvlFx.classList.add('hidden');
-  }
+  const iconEl = document.getElementById('result-icon');
+  if (iconEl) iconEl.textContent = icon;
+  document.getElementById('levelup-effect')?.classList.toggle('hidden', !leveledUp);
 }
 
 initBattle(battleEls, {
-  onVictory: ({ leveledUp, monster }) => {
-    const msg = leveledUp
-      ? `${monster.name}을(를) 물리쳤습니다! 레벨업!`
-      : `${monster.name}을(를) 물리쳤습니다! +${monster.exp} EXP`;
-    showResult('승리!', msg, leveledUp);
+  onVictory: (result) => {
+    if (result.duel) {
+      showResult(
+        '대결 종료!',
+        `${getDuelFighterName(result.winner)} 승리! 🎉`,
+        false,
+        '🏆'
+      );
+      return;
+    }
+    showResult(
+      '승리!',
+      result.leveledUp
+        ? `${result.monster.name}을(를) 물리쳤습니다! 레벨업!`
+        : `${result.monster.name}을(를) 물리쳤습니다! +${result.monster.exp} EXP`,
+      result.leveledUp,
+      '🎉'
+    );
   },
-  onDefeat: () => {
-    showResult('게임 오버', 'HP가 0이 되었습니다. 다시 도전하세요!');
-  },
+  onDefeat: () => showResult('게임 오버', 'HP가 0이 되었습니다. 다시 도전하세요!', false, '🏳️'),
 });
 
 bindClick('btn-new-game', () => startNewGame(false));
-bindClick('btn-duel-mode', () => startNewGame(true));
+bindClick('btn-duel-mode', () => showDuelSetup(true));
+bindClick('btn-duel-easy', () => startDuelWithDifficulty(1));
+bindClick('btn-duel-normal', () => startDuelWithDifficulty(2));
+bindClick('btn-duel-hard', () => startDuelWithDifficulty(3));
+bindClick('btn-duel-setup-back', () => showDuelSetup(false));
 bindClick('btn-continue', () => {
-  const saved = loadGame();
+  const saved = loadGame('solo');
   if (saved) {
     gameState = saved;
     saveGame(gameState);
@@ -145,24 +191,111 @@ bindClick('btn-continue', () => {
 });
 
 bindClick('btn-world-back', () => showScreen('title'));
-
+bindClick('btn-world-start', () => startWorldBattle(selectedWorldId));
 bindClick('btn-judge-perfect', () => judge('perfect'));
 bindClick('btn-judge-good', () => judge('good'));
 bindClick('btn-judge-miss', () => judge('miss'));
 bindClick('btn-skill-burst', () => useSkill('burst'));
-bindClick('btn-skill-tempo', () => useSkill('tempo'));
-bindClick('btn-skill-perfect', () => useSkill('perfect'));
+bindClick('btn-skill-shield', () => useSkill('shield'));
+bindClick('btn-skill-guide', () => useSkill('guide'));
 bindClick('btn-regenerate', () => newPattern());
 bindClick('btn-hide-answer', () => setAnswerHidden(true));
 bindClick('btn-show-answer', () => setAnswerHidden(false));
-bindClick('btn-zoom-100', () => setScoreZoom(1));
-bindClick('btn-zoom-200', () => setScoreZoom(2));
-bindClick('btn-zoom-300', () => setScoreZoom(3));
+let countingOn = false;
+bindClick('btn-toggle-counting', () => {
+  countingOn = !countingOn;
+  setShowCounting(countingOn);
+  document.getElementById('btn-toggle-counting')?.classList.toggle('active', countingOn);
+});
+bindClick('btn-pause', openPauseMenu);
+bindClick('btn-resume', closePauseMenu);
+
+document.getElementById('pause-tab-menu')?.addEventListener('click', () => switchPauseTab('menu'));
+document.getElementById('pause-tab-map')?.addEventListener('click', () => switchPauseTab('map'));
+
+function getPauseCallbacks() {
+  return {
+    onResume: closePauseMenu,
+    onDuelDifficultyChange: (level) => {
+      resumeAudio();
+      sounds.click();
+      setDuelDifficulty(level);
+    },
+  };
+}
+
+function openPauseMenu() {
+  resumeAudio();
+  sounds.click();
+  pauseBattle();
+  syncBattleChromeForMode();
+  showPauseOverlay(true);
+
+  const duel = getState()?.player?.duelMode;
+  const tabs = document.querySelector('.pause-tabs');
+  const menuEl = document.getElementById('pause-content-menu');
+  const duelEl = document.getElementById('pause-content-duel');
+  const mapEl = document.getElementById('pause-content-map');
+
+  if (duel) {
+    tabs?.classList.add('hidden');
+    menuEl?.classList.add('hidden');
+    mapEl?.classList.add('hidden');
+    duelEl?.classList.remove('hidden');
+    renderPauseMap(duelEl, getPauseCallbacks());
+    return;
+  }
+
+  tabs?.classList.remove('hidden');
+  duelEl?.classList.add('hidden');
+  switchPauseTab('menu');
+}
+
+function closePauseMenu() {
+  resumeAudio();
+  sounds.click();
+  resumeBattle();
+  showPauseOverlay(false);
+  document.getElementById('pause-content-duel')?.classList.add('hidden');
+}
+
+function switchPauseTab(tab) {
+  const duel = getState()?.player?.duelMode;
+  if (duel) return;
+
+  document.getElementById('pause-tab-menu')?.classList.toggle('active', tab === 'menu');
+  document.getElementById('pause-tab-map')?.classList.toggle('active', tab === 'map');
+  document.getElementById('pause-content-menu')?.classList.toggle('hidden', tab !== 'menu');
+  document.getElementById('pause-content-map')?.classList.toggle('hidden', tab !== 'map');
+  if (tab === 'map') {
+    renderPauseMap(document.getElementById('pause-content-map'), getPauseCallbacks());
+  }
+}
 bindClick('btn-fullscreen', () => toggleFullscreen());
+document.querySelectorAll('[data-duel-diff]').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    resumeAudio();
+    sounds.click();
+    const level = Number(btn.getAttribute('data-duel-diff'));
+    setDuelDifficulty(level);
+  });
+});
 bindClick('btn-flee', () => {
+  const wasDuel = gameState.player.duelMode;
   fleeBattle();
+  if (wasDuel) {
+    clearSave();
+    gameState = createNewGame(false);
+    showScreen('title');
+    updateContinueButton();
+    return;
+  }
   showScreen('world');
-  renderWorldList();
+  renderWorldScreen();
+});
+
+document.getElementById('btn-teacher-toggle')?.addEventListener('click', () => {
+  document.getElementById('teacher-panel')?.classList.toggle('open');
 });
 
 document.getElementById('btn-result-continue')?.addEventListener('click', handleResultContinue);
@@ -171,10 +304,21 @@ function handleResultContinue() {
   resumeAudio();
   sounds.click();
 
-  const st = getState() ?? gameState;
-  if (st.player.hp <= 0) {
+  gameState = getState() ?? gameState;
+
+  if (gameState.player.duelMode) {
     clearSave();
-    gameState = createNewGame(st.player.duelMode);
+    gameState = createNewGame(false);
+    saveGame(gameState);
+    showScreen('title');
+    updateContinueButton();
+    return;
+  }
+
+  if (gameState.player.hp <= 0) {
+    clearSave();
+    gameState = createNewGame(gameState.player.duelMode);
+    saveGame(gameState);
     showScreen('title');
     updateContinueButton();
     return;
@@ -182,15 +326,12 @@ function handleResultContinue() {
 
   const { nextWorld, cleared } = advanceAfterVictory();
   if (cleared) {
-    document.getElementById('result-title').textContent = '축하합니다!';
-    document.getElementById('result-message').textContent =
-      '모든 몬스터를 물리쳤습니다! 우쿨렐레 마스터!';
-    document.getElementById('levelup-effect').classList.add('hidden');
+    showResult('축하합니다!', '모든 몬스터를 물리쳤습니다! 리듬 마스터!', false, '👑');
     return;
   }
 
   if (nextWorld) {
-    const w = getWorld(st.player.worldId);
+    const w = getWorld(gameState.player.worldId);
     showResult('월드 클리어!', `${w.name}을(를) 정복했습니다!`);
     return;
   }
@@ -204,4 +345,15 @@ function updateContinueButton() {
 }
 
 updateContinueButton();
-renderWorldList();
+
+async function boot() {
+  await ensureSiteAccess();
+
+  if (window.innerWidth > 720) {
+    document.getElementById('teacher-panel')?.classList.add('open');
+  }
+
+  initTitleHero(document.getElementById('title-hero-mount'));
+}
+
+boot();

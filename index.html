@@ -3,122 +3,213 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>우쿨렐레 리듬 몬스터 RPG</title>
+  <title>리듬 몬스터 RPG</title>
+  <script>
+    (function () {
+      if (location.protocol !== 'file:') return;
+
+      var PORTS = [8765, 8766, 8767, 8877];
+      var idx = 0;
+
+      function go(url) {
+        location.replace(url);
+      }
+
+      function probe() {
+        if (idx >= PORTS.length) return;
+        var url = 'http://127.0.0.1:' + PORTS[idx] + '/';
+        fetch(url, { mode: 'no-cors', cache: 'no-store' })
+          .then(function () { go(url); })
+          .catch(function () {
+            idx += 1;
+            if (idx < PORTS.length) setTimeout(probe, 600);
+          });
+      }
+
+      document.documentElement.classList.add('file-launch');
+      probe();
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/art-tokens.css" />
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
+  <div id="file-launch-hint" hidden>
+    <div class="file-launch-box">
+      <h2>리듬 몬스터 RPG</h2>
+      <p>게임을 시작하려면 같은 폴더의 <strong>index.command</strong>를 더블클릭하세요.</p>
+      <p class="file-launch-sub">브라우저가 자동으로 열립니다. 주소 입력은 필요 없습니다.</p>
+      <button type="button" class="btn btn-primary btn-lg" id="btn-retry-localhost">다시 연결</button>
+    </div>
+  </div>
   <div id="app">
+
     <!-- 타이틀 -->
     <section id="screen-title" class="screen active">
-      <div class="title-box">
-        <h1>우쿨렐레 리듬<br />몬스터 RPG</h1>
-        <p class="subtitle">리듬을 맞추고 몬스터를 물리치세요!</p>
-        <button class="btn btn-primary" id="btn-new-game">새 게임</button>
-        <button class="btn btn-secondary" id="btn-continue" disabled>이어하기</button>
-        <button class="btn btn-secondary" id="btn-duel-mode">2인 대결 모드</button>
+      <div class="title-screen">
+        <div class="title-clouds"></div>
+        <h1 class="game-title">Rhythm<br/>Monster RPG</h1>
+        <p class="title-sub">리듬 몬스터 RPG</p>
+        <p class="title-desc">리듬을 맞추고 몬스터를 물리치세요!</p>
+        <div class="title-buttons" id="title-buttons">
+          <button class="btn btn-primary btn-lg" id="btn-new-game">새 게임</button>
+          <button class="btn btn-secondary btn-lg" id="btn-continue" disabled>이어하기</button>
+          <button class="btn btn-secondary btn-lg" id="btn-duel-mode">2인 대결</button>
+        </div>
+        <div class="duel-setup hidden" id="duel-setup">
+          <p class="duel-setup-title">2인 대결 · 난이도 선택</p>
+          <p class="duel-setup-desc">드럼 소년 vs 피아노 소년 — 리듬 난이도를 고르세요</p>
+          <div class="duel-diff-btns">
+            <button class="btn btn-primary btn-lg" id="btn-duel-easy">초급</button>
+            <button class="btn btn-secondary btn-lg" id="btn-duel-normal">중급</button>
+            <button class="btn btn-secondary btn-lg" id="btn-duel-hard">고급</button>
+          </div>
+          <button class="btn btn-back" id="btn-duel-setup-back">← 돌아가기</button>
+        </div>
+        <div class="title-hero-wrap" id="title-hero-mount"></div>
       </div>
     </section>
 
-    <!-- 월드 선택 -->
+    <!-- 월드맵 -->
     <section id="screen-world" class="screen">
-      <h2>월드 선택</h2>
-      <div id="world-list" class="world-grid"></div>
-      <button class="btn btn-back" id="btn-world-back">← 돌아가기</button>
+      <div class="world-screen">
+        <h2 class="screen-heading">🗺️ 모험 지도</h2>
+        <p class="world-screen-sub">목적지를 선택하고 리듬 여행을 시작하세요!</p>
+        <div id="world-map-root" class="world-map-screen"></div>
+        <div id="bestiary-root" class="bestiary-screen"></div>
+        <div class="world-screen-actions">
+          <button class="btn btn-primary btn-lg hidden" id="btn-world-start">▶ 이 월드로 출발</button>
+          <button class="btn btn-back" id="btn-world-back">← 타이틀로</button>
+        </div>
+      </div>
     </section>
 
     <!-- 전투 -->
     <section id="screen-battle" class="screen">
       <div class="battle-layout">
+        <!-- 교사 패널 (접을 수 있음) -->
         <aside class="teacher-panel" id="teacher-panel">
-          <h3>교사 패널</h3>
-          <div class="teacher-btns">
-            <button class="btn btn-sm" id="btn-fullscreen">전체화면</button>
-            <button class="btn btn-sm" id="btn-zoom-100">100%</button>
-            <button class="btn btn-sm" id="btn-zoom-200">200%</button>
-            <button class="btn btn-sm" id="btn-zoom-300">300%</button>
-            <button class="btn btn-sm" id="btn-hide-answer">정답 숨기기</button>
-            <button class="btn btn-sm" id="btn-show-answer">정답 표시</button>
-            <button class="btn btn-sm" id="btn-regenerate">패턴 재생성</button>
-          </div>
-          <hr />
-          <p class="teacher-label">판정</p>
-          <div class="judge-btns">
-            <button class="btn btn-success" id="btn-judge-perfect">완벽!</button>
-            <button class="btn btn-good" id="btn-judge-good">좋음</button>
-            <button class="btn btn-miss" id="btn-judge-miss">실패</button>
-          </div>
-          <hr />
-          <p class="teacher-label">특수기</p>
-          <div class="skill-btns">
-            <button class="btn btn-skill" id="btn-skill-burst">리듬 버스트 (10)</button>
-            <button class="btn btn-skill" id="btn-skill-tempo">템포 브레이크 (15)</button>
-            <button class="btn btn-skill" id="btn-skill-perfect">퍼펙트 스트럼 (20)</button>
+          <button class="teacher-toggle" id="btn-teacher-toggle" title="교사 패널">🎓</button>
+          <div class="teacher-panel-body" id="teacher-panel-body">
+            <h3>교사 패널</h3>
+            <div class="teacher-btns">
+              <button class="btn btn-sm" id="btn-fullscreen">전체화면</button>
+              <button class="btn btn-sm" id="btn-hide-answer">스트럼 숨기기</button>
+              <button class="btn btn-sm" id="btn-show-answer">스트럼 표시</button>
+              <button class="btn btn-sm" id="btn-toggle-counting">박자 카운팅</button>
+              <button class="btn btn-sm" id="btn-regenerate">패턴 재생성</button>
+            </div>
+            <div class="teacher-duel-diff hidden" id="teacher-duel-diff">
+              <p class="teacher-label">2인 대결 난이도</p>
+              <div class="duel-diff-toggle">
+                <button class="btn btn-sm" type="button" data-duel-diff="1">초급</button>
+                <button class="btn btn-sm" type="button" data-duel-diff="2">중급</button>
+                <button class="btn btn-sm" type="button" data-duel-diff="3">고급</button>
+              </div>
+            </div>
+            <hr />
+            <p class="teacher-label">판정</p>
+            <div class="judge-btns">
+              <button class="btn btn-success" id="btn-judge-perfect">✨ 완벽!</button>
+              <button class="btn btn-good" id="btn-judge-good">👍 좋음</button>
+              <button class="btn btn-miss" id="btn-judge-miss">✗ 실패</button>
+            </div>
+            <hr />
+            <p class="teacher-label">특수기 <span class="skill-points-badge" id="skill-points-label">SP 3/3</span></p>
+            <div class="skill-btns">
+              <button class="btn btn-skill" id="btn-skill-burst">🎵💥 리듬 버스트</button>
+              <button class="btn btn-skill btn-skill-shield" id="btn-skill-shield">
+                <img class="skill-btn-icon" src="assets/icons/rhythm_shield.svg" alt="" /> 리듬 쉴드
+              </button>
+              <button class="btn btn-skill btn-skill-guide" id="btn-skill-guide">
+                <img class="skill-btn-icon" src="assets/icons/master_guide.svg" alt="" /> 마스터 가이드
+              </button>
+            </div>
+            <details class="score-details mt-2">
+              <summary>📜 VexFlow 악보</summary>
+              <div class="score-container" id="score-container">
+                <div id="vexflow-output"></div>
+              </div>
+            </details>
           </div>
         </aside>
 
-        <main class="battle-main">
-          <div class="battle-header">
-            <div class="player-info">
-              <span id="player-name">플레이어</span>
-              <div class="stat-bar hp-bar">
-                <div class="stat-fill" id="player-hp-fill"></div>
-              </div>
-              <span id="player-hp-text">20/20</span>
-              <span class="level-badge" id="player-level">Lv.1</span>
-            </div>
-            <div class="exp-info">
-              EXP <span id="player-exp">0</span>
-              <span class="combo-display" id="combo-display">콤보 0</span>
-            </div>
-          </div>
-
+        <!-- 포켓몬 스타일 배틀 -->
+        <main class="battle-main" id="battle-main">
           <div class="duel-indicator hidden" id="duel-indicator">
-            <span id="duel-role">A 학생 공격</span>
+            <span id="duel-role">드럼 소년 차례</span>
+            <span class="duel-mode-tag" id="duel-difficulty-tag">2인 대결 · 중급</span>
           </div>
 
-          <div class="monster-area" id="monster-area">
-            <div class="world-label" id="world-label">월드 1 · 숲의 리듬</div>
-            <div class="monster-sprite" id="monster-sprite">🟢</div>
-            <div class="monster-name" id="monster-name">슬라임</div>
-            <div class="stat-bar hp-bar monster-hp">
-              <div class="stat-fill enemy-fill" id="monster-hp-fill"></div>
-            </div>
-            <span id="monster-hp-text">15/15</span>
-            <div class="boss-badge hidden" id="boss-badge">BOSS</div>
-          </div>
-
-          <div class="message-box" id="message-box">
-            리듬 패턴을 연주하세요!
-          </div>
-
-          <div class="score-container" id="score-container">
-            <div id="vexflow-output"></div>
-          </div>
-
-          <div class="strum-container" id="strum-container">
-            <h4>스트럼 가이드</h4>
-            <div id="strum-hints"></div>
-          </div>
+          <div id="battle-scene" class="battle-scene scene-duel"></div>
+          <div id="battle-hud" class="battle-hud"></div>
 
           <div class="battle-actions">
-            <button class="btn btn-secondary" id="btn-flee">도망</button>
+            <button class="btn btn-pause" id="btn-pause" title="일시정지">⏸️ 메뉴</button>
+            <button class="btn btn-flee" id="btn-flee">🏃 도망</button>
           </div>
         </main>
       </div>
     </section>
 
+    <!-- 일시정지 오버레이 -->
+    <div id="pause-overlay" class="pause-overlay">
+      <div class="pause-menu">
+        <h2>⏸️ 일시정지</h2>
+        <div class="pause-tabs">
+          <button class="btn btn-secondary pause-tab active" id="pause-tab-menu">메뉴</button>
+          <button class="btn btn-secondary pause-tab" id="pause-tab-map">🗺️ 지도</button>
+        </div>
+        <div id="pause-content-menu" class="pause-content">
+          <p class="pause-hint">게임이 잠시 멈춥니다. 지도를 보거나 계속 플레이할 수 있어요.</p>
+          <button class="btn btn-primary btn-lg" id="btn-resume">▶ 게임 계속</button>
+        </div>
+        <div id="pause-content-duel" class="pause-content hidden"></div>
+        <div id="pause-content-map" class="pause-content hidden"></div>
+      </div>
+    </div>
+
     <!-- 결과 -->
     <section id="screen-result" class="screen">
       <div class="result-box">
+        <div class="result-icon" id="result-icon">🎉</div>
         <h2 id="result-title">승리!</h2>
         <p id="result-message"></p>
-        <div id="levelup-effect" class="levelup-effect hidden">LEVEL UP!</div>
-        <button class="btn btn-primary" id="btn-result-continue">계속</button>
+        <div id="levelup-effect" class="levelup-effect hidden">⭐ LEVEL UP! ⭐</div>
+        <button class="btn btn-primary btn-lg" id="btn-result-continue">계속</button>
       </div>
     </section>
   </div>
 
   <div id="fx-layer"></div>
-  <script type="module" src="js/main.js"></script>
+  <script>
+    (function () {
+      if (location.protocol !== 'file:') return;
+      var hint = document.getElementById('file-launch-hint');
+      var app = document.getElementById('app');
+      var btn = document.getElementById('btn-retry-localhost');
+      var PORTS = [8765, 8766, 8767, 8877];
+      var idx = 0;
+      var URL = 'http://127.0.0.1:8765/';
+
+      setTimeout(function () {
+        if (location.protocol !== 'file:') return;
+        if (hint) hint.hidden = false;
+        if (app) app.style.display = 'none';
+      }, 8000);
+
+      if (btn) {
+        btn.addEventListener('click', function tryConnect() {
+          if (idx >= PORTS.length) { idx = 0; }
+          URL = 'http://127.0.0.1:' + PORTS[idx] + '/';
+          location.replace(URL);
+          idx += 1;
+        });
+      }
+    })();
+  </script>
+  <script type="module" src="js/main.js?v=duel16"></script>
 </body>
 </html>
